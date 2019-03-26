@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <iostream>
-#include <fstream>
 #include <stdlib.h>
 #include <string.h>
 
@@ -118,30 +117,6 @@ void OrderMaker :: Print () {
 	}
 }
 
-void OrderMaker :: PrintInOfstream (std :: ofstream &md) {
-	
-	for (int i = 0; i < numAtts; i++)
-	{
-		md << whichAtts[i] << " ";
-		
-		if (whichTypes[i] == Int) {
-			
-			md << "Int" << endl;
-			
-		} else if (whichTypes[i] == Double) {
-			
-			md << "Double" << endl;
-			
-		} else {
-			
-			md << "String" << endl;
-			
-		}
-		
-	}
-	
-}
-
 
 int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 
@@ -167,7 +142,7 @@ int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 		// now verify that it operates over atts from both tables
 		if (!((orList[i][0].operand1 == Left && orList[i][0].operand2 == Right) ||
 		      (orList[i][0].operand2 == Left && orList[i][0].operand1 == Right))) {
-			continue;		
+			//continue;		
 		}
 
 		// since we are here, we have found a join attribute!!!
@@ -199,7 +174,6 @@ int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 	}
 	
 	return left.numAtts;
-
 }
 
 

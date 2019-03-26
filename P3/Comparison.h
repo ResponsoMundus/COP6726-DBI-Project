@@ -1,22 +1,19 @@
 #ifndef COMPARISON_H
 #define COMPARISON_H
 
-#include <iostream>
-
 #include "Record.h"
 #include "Schema.h"
 #include "File.h"
 #include "Comparison.h"
 #include "ComparisonEngine.h"
+#include <stdlib.h>
 
 // This stores an individual comparison that is part of a CNF
 class Comparison {
 
 	friend class ComparisonEngine;
 	friend class CNF;
-	
-	friend class Sorted;
-	
+
 	Target operand1;
 	int whichAtt1;
 	Target operand2;
@@ -45,17 +42,16 @@ class OrderMaker {
 
 	friend class ComparisonEngine;
 	friend class CNF;
-	
-	friend class DBFile;
-	friend class Sorted;
+
+public:
 
 	int numAtts;
 
 	int whichAtts[MAX_ANDS];
 	Type whichTypes[MAX_ANDS];
 
-public:
 	
+
 	// creates an empty OrdermMaker
 	OrderMaker();
 
@@ -65,9 +61,6 @@ public:
 
 	// print to the screen
 	void Print ();
-	
-	// print to a ofstream for metadata file
-	void PrintInOfstream (std :: ofstream &md);
 };
 
 class Record;
@@ -78,8 +71,6 @@ class Record;
 class CNF {
 
 	friend class ComparisonEngine;
-	
-	friend class Sorted;
 
 	Comparison orList[MAX_ANDS][MAX_ORS];
 	

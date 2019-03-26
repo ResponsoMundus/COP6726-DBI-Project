@@ -112,6 +112,11 @@ public:
 
 class DuplicateRemoval : public RelOp {
 
+private:
+	
+	Pipe *in, *out;
+	Schema *schema;
+
 public:
 	
 	DuplicateRemoval(){};
@@ -124,6 +129,11 @@ public:
 };
 
 class Sum : public RelOp {
+
+private:
+	
+	Pipe *in, *out;
+	Function *compute;
 
 public:
 	

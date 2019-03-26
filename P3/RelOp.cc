@@ -359,7 +359,82 @@ void Join :: Start () {
 
 /*                 Duplicate Removal                 */
 
+void DuplicateRemoval :: Run (
+	Pipe &inPipe,
+	Pipe &outPipe,
+	Schema &mySchema
+) {
+	
+	in = &inPipe;
+	out = &outPipe;
+	schema = &mySchema;
+	
+	pthread_create (&t, NULL, _StartOp, (void *) this);
+	
+}
+
+void DuplicateRemoval :: Start () {
+	
+	ComparisonEngine comp;
+		
+	Record *tmp = new Record ();
+	Record *prev = new Record ();
+	OrderMaker sortOrder (schema);
+	
+	Pipe *p = new Pipe (buffSize);
+	BigQ bingq (*in, *p, *sortOrder, runLen);
+	
+	p->Remove (tmp);
+	prev->Copy (tmp);
+	out->Insert (tmp);
+	
+	while (p->Remove (tmp)) {
+		
+		if (!comp.Compare (tmp, prev, sortOrder)) {
+			
+			prev.Copy (tmp);
+			out->Insert (tmp);
+			
+		}
+		
+	}
+	
+	in->ShutDown ();
+	out->ShutDown ();
+	
+	delete p;
+	
+}
+
 /*                        Sum                        */
+void Sum :: Run (
+	Pipe &inPipe,
+	Pipe &outPipe,
+	Function &computeMe
+) {
+	
+	in = &inPipe;
+	out = &outPipe;
+	compute = &computeMe;
+	
+	pthread_create (&t, NULL, _StartOp, (void *) this);
+	
+}
+
+void Sum :: Start () {
+	
+	Record *tmp = new Record ();
+	Record *sum = new Record ();
+	
+	Type type;
+	
+	int integerSum = 0, s;
+	double doubleSum = 0, double;
+	
+	
+	
+	
+}
 
 /*                      Group By                     */
 
