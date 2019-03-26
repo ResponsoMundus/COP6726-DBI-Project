@@ -1,0 +1,15 @@
+P1/bin/
+P2/bin/
+P2-2/bin/
+P3/bin/
+P1/tcph/
+P2/tcph/
+P2-2/tcph/
+P3/tcph/
+*.o
+*.tbl
+*.bin
+*.out
+doc/
+*.goutputstream-M6BIXZ
+*.nfs0000000000222cd300003e95
