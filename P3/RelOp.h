@@ -3,14 +3,17 @@
 
 #include <iostream>
 #include <vector>
+#include <cstring>
+#include <sstream>
 #include <pthread.h>
 
 #include "Pipe.h"
 #include "DBFile.h"
+#include "Schema.h"
 #include "Record.h"
 #include "Function.h"
-#include "Comparison"
-#include "ComparisonEngine"
+#include "Comparison.h"
+#include "ComparisonEngine.h"
 
 class RelOp {
 
@@ -26,10 +29,10 @@ public:
 	virtual void WaitUntilDone ();
 	
 	// tells how much internal memory the operation can use
-	virtual void Use_n_Pages (int n) = 0;
+	virtual void Use_n_Pages (int n);
 	
 	// starts the operation
-	virtual void Start ();
+	virtual void Start () = 0;
 	
 };
 
@@ -82,8 +85,8 @@ private:
 
 public:
 	
-	Project(){};
-	~Project(){};
+	Project () {};
+	~Project () {};
 	
 	void Run (Pipe &inPipe, Pipe &outPipe, int *keepMe, int numAttsInput, int numAttsOutput);
 	
@@ -101,8 +104,8 @@ private:
 	
 public:
 	
-	Join(){};
-	~Join(){};
+	Join () {};
+	~Join () {};
 	
 	void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal);
 	
@@ -119,8 +122,8 @@ private:
 
 public:
 	
-	DuplicateRemoval(){};
-	~DuplicateRemoval(){};
+	DuplicateRemoval () {};
+	~DuplicateRemoval () {};
 	
 	void Run (Pipe &inPipe, Pipe &outPipe, Schema &mySchema);
 	
@@ -137,8 +140,8 @@ private:
 
 public:
 	
-	Sum(){};
-	~Sum(){};
+	Sum () {};
+	~Sum () {};
 	
 	void Run (Pipe &inPipe, Pipe &outPipe, Function &computeMe);
 	
@@ -148,10 +151,16 @@ public:
 
 class GroupBy : public RelOp {
 
+private:
+	
+	Pipe *in, *out;
+	OrderMaker *order;
+	Function *compute;
+
 public:
 	
-	GroupBy(){};
-	~GroupBy(){};
+	GroupBy () {};
+	~GroupBy () {};
 	
 	void Run (Pipe &inPipe, Pipe &outPipe, OrderMaker &groupAtts, Function &computeMe);
 	
@@ -161,15 +170,21 @@ public:
 
 class WriteOut : public RelOp {
 
+private:
+	
+	Pipe *in;
+	FILE *file;
+	Schema *schema;
+
 public:
 	
-	WriteOut(){};
-	~WriteOut(){};
+	WriteOut () {};
+	~WriteOut () {};
 	
 	void Run (Pipe &inPipe, FILE *outFile, Schema &mySchema);
 	
 	void Start ();
 	
-}
+};
 
 #endif

@@ -1,225 +1,250 @@
 #include "BigQ.h"
 
-CompareEngineWrapper :: CompareEngineWrapper (OrderMaker *order) {
+/* Comparer Implementation */
+Comparer :: Comparer (OrderMaker *order) {
 	
-	this->order = order;
-	
-}
-
-bool CompareEngineWrapper :: operator () (Record *left, Record *right) {
-	
-	ComparisonEngine comp;
-	
-	return (comp.Compare (left, right, order) == 1) ? false : true;
+    sortorder = order;
 	
 }
 
-CompareEngineWrapperForRun :: CompareEngineWrapperForRun (CompareEngineWrapper *comp) {
-	
-	this->comp = comp;
-	
-}
-
-bool CompareEngineWrapperForRun :: operator () (Run *left, Run *right) {
-	
-	return !((*comp) (left->record, right->record));
-	
-}
-
-void *sortingThread (void *arg) {
-	
-	BigQInfo *info = (BigQInfo *) arg;
-	
-	off_t pageIndex = 0;
-	
-	int curSize = sizeof(int);
-	int maxSize = info->runlen * PAGE_SIZE;
-	char *tmp = "tmp.bin";
-	
-	vector<Record *> recBuff;
-	vector<off_t> runLocs;
-	
-	File file;
-	Page page;
-	Record rec;
-	Record *newRec;
-	
-	CompareEngineWrapper comp(info->order);
-	CompareEngineWrapperForRun compForPQ(&comp);
-	
-	page.EmptyItOut ();
-	file.Open (0, tmp);
-	
-	// read data from in pipe sort them into runlen pages
-	while (info->in->Remove (&rec) == 1) {
+bool Comparer::operator() (Record* left, Record* right) {
+    
+	ComparisonEngine comparisonEngine;
+    
+    if (comparisonEngine.Compare (left, right, sortorder) < 0) {
 		
-		newRec = new Record;
-		
-		newRec->Consume (&rec);
-		curSize += newRec->GetSize ();
-		
-		if (curSize > maxSize) {
-			
-			sort(recBuff.begin (), recBuff.end (), comp);
-			
-			for (auto iter = recBuff.begin (); iter != recBuff.end (); ++iter) {
-				
-				if (page.Append (*iter) == 0) {
-					
-					file.AddPage (&page, pageIndex++);
-					page.EmptyItOut ();
-					page.Append (*iter);
-					
-				}
-				
-			}
-			
-			if (page.GetNumRecs () > 0) {
-				
-				file.AddPage (&page, pageIndex++);
-				page.EmptyItOut ();
-				
-			}
-			
-			runLocs.push_back (pageIndex);
-			
-			recBuff.clear ();
-			curSize = sizeof(int) + newRec->GetSize();
-			
-		}
-		
-		recBuff.push_back (newRec);
-		
-	}
-
-	sort(recBuff.begin(), recBuff.end(), comp);
-	
-	for (auto iter = recBuff.begin (); iter != recBuff.end (); ++iter) {
-	
-		if (page.Append (*iter) == 0) {
-			
-			file.AddPage (&page, pageIndex++);
-			page.EmptyItOut ();
-			page.Append (*iter);
-			
-		}
-		
-	}
-	
-	if (page.GetNumRecs () > 0) {
-		
-		file.AddPage (&page, pageIndex++);
-		page.EmptyItOut ();
-		
-	}
-	
-	runLocs.push_back (pageIndex);
-	
-	recBuff.clear ();
-	
-    // construct priority queue over sorted runs and dump sorted data 
- 	// into the out pipe
-	
-	off_t previous = 0;
-	priority_queue<Run *, vector<Run *>, CompareEngineWrapperForRun> runPQ (compForPQ);
-	
-	for (auto iter = runLocs.begin (); iter != runLocs.end (); ++iter) {
-		
-		runPQ.push (new Run (&file, previous, *iter));
-		previous = *iter;
-		
-	}
-	
-	while (!runPQ.empty ()) {
-		
-		Run *temp = runPQ.top ();
-		runPQ.pop ();
-		
-		if (temp->Next (&rec) == 1) {
-			
-			runPQ.push(temp);
-			
-		} else {
-			
-			delete temp;
-			
-		}
-
-		info->out->Insert (&rec);
-		
-	}
-
-    // finally shut down the out pipe
-	info->out->ShutDown ();
-	
-	file.Close ();
-	remove (tmp);
-	
-}
-
-BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
-	
-	pthread_t sortThread;
-	BigQInfo *info = new BigQInfo {
-		&in,
-		&out,
-		&sortorder,
-		runlen
-	};
-	
-	pthread_create (&sortThread, NULL, sortingThread, (void *) info);
-	
-}
-
-BigQ :: ~BigQ () {
-}
-
-Run :: Run (File *file, off_t startIndex, off_t endIndex) {
-	
-	this->file = file;
-	this->curIndex = startIndex;
-	this->endIndex = endIndex;
-	
-	this->bufferPage = new Page;
-	this->bufferPage->EmptyItOut ();
-	this->file->GetPage (this->bufferPage, curIndex++);
-	
-	this->record = new Record;
-	this->bufferPage->GetFirst (this->record);
-	
-}
-
-int Run :: Next (Record *current) {
-	
-	current->Consume (record);
-	
-	if (bufferPage->GetFirst (record) == 1) {
-		
-		return 1;
+        return true;
 		
 	} else {
 		
-		if (curIndex < endIndex) {
-			
-			file->GetPage (bufferPage, curIndex++);
-			bufferPage->GetFirst (record);
-			
-			return 1;
-			
-		} else {
-			
-			return 0;
-			
-		}
+		return false;
 		
 	}
 	
+}
+
+/* Compare Implementation */
+bool Compare :: operator() (Run* left, Run* right) {
+	
+    ComparisonEngine comparisonEngine;
+    
+    if (comparisonEngine.Compare (left->firstRecord, right->firstRecord, left->sortorder) < 0) {
+		
+        return false;
+		
+    } else {
+		
+        return true;
+		
+	}
+	
+}
+
+/* Run Implementation */
+Run :: Run (int run_length, int page_offset, File *file, OrderMaker* order) {
+    
+    runSize = run_length;
+    pageOffset = page_offset;
+    firstRecord = new Record ();
+    runsFile = file;
+    sortorder = order;
+    runsFile->GetPage (&bufferPage, pageOffset);
+    GetFirstRecord ();
+	
+}
+
+Run :: Run (File *file, OrderMaker *order) {
+	
+    firstRecord = NULL;
+    runsFile = file;
+    sortorder = order;
 	
 }
 
 Run :: ~Run () {
 	
-	delete record;
-	delete bufferPage;
+    delete firstRecord;
+	
+}
+
+int Run :: GetFirstRecord () {
+    
+    if(runSize <= 0) {
+        return 0;
+    }
+    
+    Record* record = new Record();
+    
+    // try to get the Record, get next page if necessary
+    if (bufferPage.GetFirst(record) == 0) {
+        pageOffset++;
+        runsFile->GetPage(&bufferPage, pageOffset);
+        bufferPage.GetFirst(record);
+    }
+    
+    runSize--;
+    
+    firstRecord->Consume(record);
+    
+    return 1;
+}
+
+/* BigQ Implementation */
+bool BigQ :: WriteRunToFile (int runLocation) {
+    
+    Page* page = new Page();
+    int recordListSize = recordList.size();
+    
+    int firstPageOffset = totalPages;
+    int pageCounter = 1;
+    
+    
+    for (int i=0; i < recordListSize; i++) {
+		
+        Record* record = recordList[i];
+		
+        if ((page->Append (record)) == 0) {
+            
+            pageCounter++;
+            
+            runsFile.AddPage (page, totalPages);
+            totalPages++;
+            page->EmptyItOut ();
+            page->Append (record);
+			
+        }
+		
+        delete record;
+		
+    }
+	
+    runsFile.AddPage(page, totalPages);
+    totalPages++;
+    page->EmptyItOut();
+    
+    recordList.clear();
+    delete page;
+	
+    AddRunToQueue (recordListSize, firstPageOffset);
+    return true;
+	
+}
+
+void BigQ :: AddRunToQueue (int runSize, int pageOffset) {
+	
+    Run* run = new Run(runSize, pageOffset, &runsFile, sortorder);
+    runQueue.push(run);
+	
+}
+
+void BigQ :: SortRecordList() {
+	
+    Page* page = new Page();
+    int pageCounter = 0, recordCounter = 0, currentRunLocation = 0;
+	
+    Record* record = new Record();
+	
+    srand (time(NULL));
+    fileName = new char[100];
+    sprintf (fileName, "%d.txt", (int)workerThread);
+    
+    runsFile.Open (0, fileName);
+    
+    while (inputPipe->Remove(record)) {
+		
+        Record* copyOfRecord = new Record ();
+		copyOfRecord->Copy (record);
+        
+		recordCounter++;
+        
+        if (page->Append (record) == 0) {
+            
+            pageCounter++;
+			
+            if (pageCounter == runlength) {
+                
+                sort (recordList.begin (), recordList.end (), Comparer (sortorder));
+                currentRunLocation = (runsFile.GetLength () == 0) ? 0 : (runsFile.GetLength () - 1);
+                
+                int recordListSize = recordList.size ();
+                
+                WriteRunToFile (currentRunLocation); 
+                
+                pageCounter = 0;
+				
+            }
+			
+            page->EmptyItOut ();
+            page->Append (record);
+			
+        }
+        
+        recordList.push_back (copyOfRecord);
+        
+    }
+    
+    
+    // Last Run
+    if(recordList.size () > 0) {
+		
+        sort (recordList.begin (), recordList.end (), Comparer (sortorder));
+        currentRunLocation = (runsFile.GetLength () == 0) ? 0 : (runsFile.GetLength () - 1);
+        
+        int recordListSize = recordList.size ();
+		
+        WriteRunToFile (currentRunLocation);
+        
+        page->EmptyItOut ();
+		
+    }
+	
+    delete record;
+    delete page;
+	
+}
+
+void BigQ :: MergeRuns () {
+    
+    Run* run = new Run (&runsFile, sortorder);
+    Page page;
+    
+    int i = 0;
+	
+    while (!runQueue.empty ()) {
+		
+        Record* record = new Record ();
+        run = runQueue.top ();
+        runQueue.pop ();
+            
+        record->Copy (run->firstRecord);
+        outputPipe->Insert (record);
+		
+        if (run->GetFirstRecord () > 0) {
+			
+            runQueue.push(run);
+        
+		}
+		
+        delete record;
+		
+    }
+
+    runsFile.Close();
+    remove(fileName);
+    
+    outputPipe->ShutDown();
+    delete run;
+	
+}
+
+BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
+	
+    this->sortorder = &sortorder;
+    inputPipe = &in;
+    outputPipe = &out;
+    runlength = runlen;
+    totalPages = 1;
+    
+    pthread_create(&workerThread, NULL, StartMainThread, (void *)this);
 	
 }

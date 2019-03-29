@@ -7,12 +7,15 @@
 #include "Comparison.h"
 #include "ComparisonEngine.h"
 #include <stdlib.h>
+#include <iostream>
 
 // This stores an individual comparison that is part of a CNF
 class Comparison {
 
 	friend class ComparisonEngine;
 	friend class CNF;
+	
+	friend class Sorted;
 
 	Target operand1;
 	int whichAtt1;
@@ -32,6 +35,7 @@ public:
 
 	// print to the screen
 	void Print ();
+	
 };
 
 
@@ -42,6 +46,9 @@ class OrderMaker {
 
 	friend class ComparisonEngine;
 	friend class CNF;
+	
+	friend class DBFile;
+	friend class Sorted;
 
 public:
 
@@ -61,6 +68,9 @@ public:
 
 	// print to the screen
 	void Print ();
+	
+	// print to a ofstream for metadata file
+	void PrintInOfstream (std :: ofstream &md);
 };
 
 class Record;
@@ -71,6 +81,8 @@ class Record;
 class CNF {
 
 	friend class ComparisonEngine;
+	
+	friend class Sorted;
 
 	Comparison orList[MAX_ANDS][MAX_ORS];
 	

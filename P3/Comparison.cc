@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <string.h>
 
@@ -175,7 +176,6 @@ int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 	
 	return left.numAtts;
 }
-
 
 void CNF :: Print () {
 
@@ -614,3 +614,26 @@ void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 }
 
 
+void OrderMaker :: PrintInOfstream (std :: ofstream &md) {
+	
+	for (int i = 0; i < numAtts; i++)
+	{
+		md << whichAtts[i] << " ";
+		
+		if (whichTypes[i] == Int) {
+			
+			md << "Int" << endl;
+			
+		} else if (whichTypes[i] == Double) {
+			
+			md << "Double" << endl;
+			
+		} else {
+			
+			md << "String" << endl;
+			
+		}
+		
+	}
+	
+}

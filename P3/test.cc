@@ -99,7 +99,7 @@ void q1 () {
 
 	SF_ps.Run (dbf_ps, _ps, cnf_ps, lit_ps);
 	SF_ps.WaitUntilDone ();
-
+	
 	int cnt = clear_pipe (_ps, ps->schema (), true);
 	cout << "\n\n query1 returned " << cnt << " records \n";
 
@@ -115,10 +115,10 @@ void q2 () {
 	init_SF_p (pred_p, 100);
 
 	Project P_p;
-		Pipe _out (pipesz);
-		int keepMe[] = {0,1,7};
-		int numAttsIn = pAtts;
-		int numAttsOut = 3;
+	Pipe _out (pipesz);
+	int keepMe[] = {0,1,7};
+	int numAttsIn = pAtts;
+	int numAttsOut = 3;
 	P_p.Use_n_Pages (buffsz);
 
 	SF_p.Run (dbf_p, _p, cnf_p, lit_p);
@@ -129,7 +129,7 @@ void q2 () {
 
 	Attribute att3[] = {IA, SA, DA};
 	Schema out_sch ("out_sch", numAttsOut, att3);
-	int cnt = clear_pipe (_p, p->schema (), true);
+	int cnt = clear_pipe (_out, &out_sch, true);
 
 	cout << "\n\n query2 returned " << cnt << " records \n";
 
@@ -159,7 +159,7 @@ void q3 () {
 
 	Schema out_sch ("out_sch", 1, &DA);
 	int cnt = clear_pipe (_out, &out_sch, true);
-
+	
 	cout << "\n\n query3 returned " << cnt << " records \n";
 
 	dbf_s.Close ();
@@ -178,7 +178,7 @@ void q4 () {
 
 	char *pred_ps = "(ps_suppkey = ps_suppkey)";
 	init_SF_ps (pred_ps, 100);
-
+	
 	Join J;
 		// left _s
 		// right _ps
@@ -191,7 +191,7 @@ void q4 () {
 	Attribute ps_supplycost = {"ps_supplycost", Double};
 	Attribute joinatt[] = {IA,SA,SA,IA,SA,DA,SA, IA,IA,IA,ps_supplycost,SA};
 	Schema join_sch ("join_sch", outAtts, joinatt);
-
+	
 	Sum T;
 		// _s (input pipe)
 		Pipe _out (1);
@@ -200,11 +200,12 @@ void q4 () {
 			get_cnf (str_sum, &join_sch, func);
 			func.Print ();
 	T.Use_n_Pages (1);
-
+	
 	SF_ps.Run (dbf_ps, _ps, cnf_ps, lit_ps); // 161 recs qualified
 	J.Run (_s, _ps, _s_ps, cnf_p_ps, lit_p_ps);
 	T.Run (_s_ps, _out, func);
 
+	SF_s.WaitUntilDone ();
 	SF_ps.WaitUntilDone ();
 	J.WaitUntilDone ();
 	T.WaitUntilDone ();

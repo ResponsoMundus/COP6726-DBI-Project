@@ -33,14 +33,14 @@ public:
 	int Compare(Record *left, Record *right, OrderMaker *orderUs);
 
 	// similar to the last function, except that this one works in the
-        // case where the two records come from different input relations
+    // case where the two records come from different input relations
 	// it is used to do sorts for a sort-merge join
 	int Compare(Record *left, OrderMaker *order_left, Record *right, OrderMaker *order_right);
 
 	// this applies the given CNF to the three records and either 
 	// accepts the records or rejects them.
-        // It is is for binary operations such as join.  Returns
-        // a 0 if the given CNF evaluates to false over the record pair
+    // It is is for binary operations such as join.  Returns
+    // a 0 if the given CNF evaluates to false over the record pair
 	int Compare(Record *left, Record *right, Record *literal, CNF *myComparison);
 
 	// like the last one, but for unary operations

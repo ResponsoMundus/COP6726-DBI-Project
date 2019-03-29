@@ -38,7 +38,7 @@ Attribute *Schema :: GetAtts () {
 
 
 Schema :: Schema (char *fpath, int num_atts, Attribute *atts) {
-	fileName = strdup (fpath);
+	fileName = fpath;
 	numAtts = num_atts;
 	myAtts = new Attribute[numAtts];
 	for (int i = 0; i < numAtts; i++ ) {
@@ -56,7 +56,7 @@ Schema :: Schema (char *fpath, int num_atts, Attribute *atts) {
 			delete [] myAtts;
 			exit (1);
 		}
-		myAtts[i].name = strdup (atts[i].name);
+		myAtts[i].name = strdup(atts[i].name);
 	}
 }
 

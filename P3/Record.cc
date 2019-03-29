@@ -476,8 +476,49 @@ int Record :: GetSize () {
 
 int Record :: GetLength () {
 	
-	return ((int *) bits)[1] / sizeof (int) - 1 ;
+	if (((int*)bits)[0] < 3)	return 0;
+	
+	return (((int *) bits)[1] / sizeof (int)) - 1 ;
 	
 }
 
-
+void Record :: WriteToFile (FILE *file, Schema *mySchema) {
+    
+	int n = mySchema->GetNumAtts ();
+    Attribute *atts = mySchema->GetAtts ();
+	
+	for (int i = 0; i < n; i++) {
+		
+		fprintf(file, "%s:", atts[i].name);
+		
+		int ptr = ((int *) bits)[i + 1];
+		fprintf(file, "[");
+		
+		if (atts[i].myType == Int) {
+			
+			int *temp = (int *) &(bits[ptr]);
+            fprintf(file, "%d", *temp);
+		
+		} else if (atts[i].myType == Double) {
+			
+			double *tempDbl = (double *) &(bits[ptr]);
+            fprintf(file,"%f",*tempDbl);
+		
+		} else if (atts[i].myType == String) {
+			
+			char *str = (char *) &(bits[ptr]);
+            fprintf(file,"%s",str);
+			
+        }
+		
+		fprintf(file,"]");
+        if (i != n - 1) {
+			
+			fprintf(file,", ");
+		
+		}
+    }
+	
+	fprintf(file,"\n");
+	
+}

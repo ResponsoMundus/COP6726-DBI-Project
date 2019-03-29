@@ -69,6 +69,9 @@ public:
 	// that the schema also be given so that the record can be interpreted
 	void Print (Schema *mySchema);
 	
+	// prints the contents of the record to file
+	void WriteToFile (FILE* file, Schema *mySchema);
+	
 	// Get the size of the record
 	int GetSize ();
 	
