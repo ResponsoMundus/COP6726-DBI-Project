@@ -529,29 +529,29 @@ int Sorted :: GetNext (Record &fetchme, CNF &cnf, Record &literal) {
 	ComparisonEngine comp;
 	
 	if (!query) {
-		cout << "No query found! Try to gen one!" << endl;
+		// cout << "No query found! Try to gen one!" << endl;
 		// query does not exist
 		query = new OrderMaker;
 		
 		if (QueryOrderGen (*query, *order, cnf) > 0) {
 			// query generated successfully
-			cout << "Query Gen Success! Go Bin Search!" << endl;
+			// cout << "Query Gen Success! Go Bin Search!" << endl;
 			query->Print ();
 			if (BinarySearch (fetchme, cnf, literal)) {
-				cout << "Found!" << endl;
+				// cout << "Found!" << endl;
 				// Found
 				return 1;
 				
 			} else {
 				// binary search fails
-				cout << "Not Found!" << endl;
+				// cout << "Not Found!" << endl;
 				return 0;
 				
 			}
 			
 		} else {
 			//query generated but is empty
-			cout << "Query Gen fail! Go Sequential!" << endl;
+			// cout << "Query Gen fail! Go Sequential!" << endl;
 			return GetNextSequential (fetchme, cnf, literal);
 			
 		}

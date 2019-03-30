@@ -125,14 +125,19 @@ void Project :: Run (
 	
 void Project :: Start () {
 	
+	// int count = 0;
+	
 	Record *tmp = new Record ();
 	
 	while (in->Remove (tmp)) {
 		
 		tmp->Project (attsToKeep, numAttsOut, numAttsIn);
 		out->Insert (tmp);
+		// count++;
 		
 	}
+	
+	// cout << count << " projected!" << endl;
 	
 	out->ShutDown ();
 	
@@ -161,7 +166,7 @@ void Join :: Run (
 	
 void Join :: Start () {
 	
-	int count = 0;
+	// int count = 0;
 	
 	int leftNumAtts, rightNumAtts;
 	int totalNumAtts;
@@ -176,12 +181,9 @@ void Join :: Start () {
 	
 	cnf->GetSortOrders(leftOrder, rightOrder);
 	
-	leftOrder.Print ();
-	rightOrder.Print ();
-	
 	if (leftOrder.numAtts > 0 && rightOrder.numAtts > 0) {
 		
-		cout << "bigq Version" << endl;
+		// cout << "bigq Version" << endl;
 		
 		Pipe left (buffSize);
 		Pipe right (buffSize);
@@ -269,7 +271,7 @@ void Join :: Start () {
 					leftNumAtts
 				);
 				
-				count++;
+				// count++;
 				
 				out->Insert (tmp);
 				
@@ -360,7 +362,7 @@ void Join :: Start () {
 							leftNumAtts
 						);
 						
-						count++;
+						//count++;
 						
 						out->Insert (newRec);
 						
@@ -379,13 +381,13 @@ void Join :: Start () {
 		
 	}
 	
+	// cout << count << " records join!" << endl;
+	
+	out->ShutDown ();
+	
 	delete fromLeft;
 	delete fromRight;
 	delete attsToKeep;
-	
-	cout << count << " records join!" << endl;
-	
-	out->ShutDown ();
 	
 }
 
@@ -409,31 +411,46 @@ void DuplicateRemoval :: Start () {
 	
 	ComparisonEngine comp;
 	
-	Record *tmp = new Record ();
+	// int inCount = 1, outCount = 0;
+	
+	Record *curr = new Record ();
 	Record *prev = new Record ();
 	OrderMaker sortOrder (schema);
 	
-	Pipe *p = new Pipe (buffSize);
-	BigQ bigq (*in, *p, sortOrder, runLen);
+	Pipe p (buffSize);
+	BigQ bigq (*in, p, sortOrder, runLen);
 	
-	p->Remove (tmp);
-	prev->Copy (tmp);
-	out->Insert (tmp);
+	p.Remove (prev);
 	
-	while (p->Remove (tmp)) {
+	while (p.Remove (curr)) {
 		
-		if (!comp.Compare (tmp, prev, &sortOrder)) {
+		// inCount++;
+		
+		if (comp.Compare (prev, curr, &sortOrder)) {
 			
-			prev->Copy (tmp);
-			out->Insert (tmp);
+			out->Insert (prev);
+			prev->Copy (curr);
+			// outCount++;
 			
 		}
 		
 	}
 	
+	if (curr->bits != NULL && !comp.Compare (curr, prev, &sortOrder)) {
+		
+		out->Insert (prev);
+		prev->Copy (curr);
+		// outCount++;
+		
+	}
+	
+	// cout << inCount << " records inputed!" << endl;
+	// cout << outCount << " records outputed!" << endl; 
+	
 	out->ShutDown ();
 	
-	delete p;
+	delete curr;
+	delete prev;
 	
 }
 
@@ -460,7 +477,7 @@ void Sum :: Start () {
 	Attribute atts;
 	Record *tmp = new Record ();
 	
-	int count = 1;
+	// int count = 1;
 	
 	int integerSum = 0, integerRec;
 	double doubleSum = 0, doubleRec;
@@ -488,7 +505,7 @@ void Sum :: Start () {
 	
 	while (in->Remove (tmp)) {
 		
-		count++;
+		// count++;
 		
 		compute->Apply (*tmp, integerRec, doubleRec);
 		
@@ -520,7 +537,7 @@ void Sum :: Start () {
 		
 	}
 	
-	cout << count << " records sum!" << endl;
+	// cout << count << " records sum!" << endl;
 	
 	out->Insert (tmp);
 	out->ShutDown ();
@@ -546,82 +563,160 @@ void GroupBy :: Run (
 
 void GroupBy :: Start () {
 	
-	Record *curr = new Record ();
-	Record *last = new Record ();
-	Record *tmp = new Record ();
-	Record *newRec = new Record ();
+	Type t;
+	Schema *sumSchema;
+	Attribute att;
 	
 	ComparisonEngine comp;
 	
-	Pipe *p = new Pipe (buffSize);
+	Pipe sortPipe (buffSize);
 	
-	BigQ bigq(*in, *p, *order, runLen);
+	Record *prev = new Record ();
+	Record *curr = new Record ();
+	Record *sum = new Record ();
+	Record *newRec = new Record ();
 	
-	int attsToKeep = order->numAtts + 1;
-	int atts[attsToKeep];
+	// cout << "group by started" << endl;
 	
-	atts[0] = 0;
-	for (int i = 1; i < attsToKeep; i++) {
+	BigQ bigq (*in, sortPipe, *order, runLen);
+	
+	// int count = 0;
+	
+	int integerSum = 0, integerRec;
+	double doubleSum = 0.0, doubleRec;
+	
+	char *sumStr = new char[buffSize];
+	
+	int numAtts = order->numAtts;
+	int *atts = order->whichAtts;
+	int *attsToKeep = new int[numAtts + 1];
+	
+	attsToKeep[0] = 0;
+	
+	for (int i = 0; i < numAtts; i++) {
 		
-		atts[i] = order->whichAtts[i - 1];
+		attsToKeep[i + 1] = i;
 		
 	}
 	
-	Pipe *SumIn = new Pipe (buffSize);
-	Pipe *SumOut = new Pipe (buffSize);
-	
-	Sum sum;
-	sum.Run (*SumIn, *SumOut, *compute);
-	
-	p->Remove (curr);
-	last->Copy (curr);
-	SumIn->Insert (curr);
-	
-	while (p->Remove (curr)) {
+	if (!sortPipe.Remove (prev)) {
 		
-		if (comp.Compare (last, curr, order)) {
+		cout << "No output from sortPipe!" << endl;
+		
+		delete sumStr;
+		delete sumSchema;
+		delete prev;
+		delete curr;
+		delete sum;
+		delete newRec;
+		
+		exit (-1);
+		
+	} else {
+		
+		t = compute->Apply (*prev, integerRec, doubleRec);
+		
+		if (t == Int) {
 			
-			last->Copy (curr);
-			SumIn->Insert (curr);
-				
+			integerSum += integerRec;
+			
 		} else {
 			
-			SumIn->ShutDown ();
-			SumOut->Remove (tmp);
-			
-			newRec->MergeRecords (tmp, last, 1, last->GetLength (), atts, attsToKeep, 1);
-			out->Insert (newRec);
-			
-			delete SumIn;
-			delete SumOut;
-			
-			last->Copy (curr);
-			
-			SumIn = new Pipe (buffSize);
-			SumOut = new Pipe (buffSize);
-			
-			sum.Run (*SumIn, *SumOut, *compute);
-			
-			SumIn->Insert (curr);
+			doubleSum += doubleRec;
 			
 		}
 		
 	}
 	
-	SumIn->ShutDown ();
-	SumOut->Remove (tmp);
+	att.name = "SUM";
+	att.myType = t;
 	
-	newRec->MergeRecords (tmp, last, 1, last->GetLength (), atts, attsToKeep, 1);
+	sumSchema = new Schema (NULL, 1, &att);
+	
+	while (sortPipe.Remove (curr)) {
+		
+		// cout << "doing group by" << endl;
+		
+		if (comp.Compare (prev, curr, order) != 0) {
+			// prev != curr
+			
+			if (t = Int) {
+				
+				sprintf (sumStr, "%d|", integerSum);
+				
+			} else {
+				
+				sprintf (sumStr, "%f|", doubleSum);
+				
+			}
+			
+			sum->ComposeRecord (sumSchema, sumStr);
+			sum->Print (sumSchema);
+			newRec->MergeRecords (sum, prev, 1, prev->GetLength (), attsToKeep, numAtts + 1, 1);
+			out->Insert (newRec);
+			
+			// count++;
+			// cout << count << " group done!" << endl;
+			
+			compute->Apply (*curr, integerRec, doubleRec);
+			
+			if (t == Int) {
+				
+				integerSum = integerRec;
+				
+			} else {
+				
+				doubleSum = doubleRec;
+				
+			}
+			
+			prev->Consume (curr);
+			
+			
+		} else {
+			// prev == curr
+			
+			compute->Apply (*curr, integerRec, doubleRec);
+			
+			if (t == Int) {
+				
+				integerSum += integerRec;
+				
+			} else {
+				
+				doubleSum += doubleRec;
+				
+			}
+			
+		}
+		
+	}
+	
+	if (t = Int) {
+		
+		sprintf (sumStr, "%d|", integerSum);
+		
+	} else {
+		
+		sprintf (sumStr, "%f|", doubleSum);
+		
+	}
+	
+	//count++;
+	sum->ComposeRecord (sumSchema, sumStr);
+	newRec->MergeRecords (sum, prev, 1, prev->GetLength (), attsToKeep, numAtts + 1, 1);
 	out->Insert (newRec);
+	// cout << count << " group done!" << endl;
+	
+	// cout << count << " groups!" << endl;
 	
 	out->ShutDown ();
 	
-	delete SumIn;
-	delete SumOut;
-	delete p;
+	delete sumStr;
+	delete sumSchema;
+	delete prev;
 	delete curr;
-	delete last;
-	delete tmp;
+	delete sum;
 	delete newRec;
 	
 }

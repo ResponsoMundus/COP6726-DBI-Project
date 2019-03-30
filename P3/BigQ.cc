@@ -98,8 +98,7 @@ bool BigQ :: WriteRunToFile (int runLocation) {
     int firstPageOffset = totalPages;
     int pageCounter = 1;
     
-    
-    for (int i=0; i < recordListSize; i++) {
+    for (int i = 0; i < recordListSize; i++) {
 		
         Record* record = recordList[i];
 		
