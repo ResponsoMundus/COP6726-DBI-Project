@@ -77,11 +77,13 @@ TEST (SORTEDFILETEST, ORDEREXAM) {
 		while (dbfile.GetNext (*rec)) {
 			
 			ASSERT_NE (comp.Compare (prev, rec, &o), 1);
+			prev->Copy (rec);
 		
 		}
 		
 	}
 	
+	dbfile.Close ();
 	cout << "\t\n done!" << endl;
 	
 	cleanup ();

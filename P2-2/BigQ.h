@@ -11,35 +11,54 @@
 
 using namespace std;
 
-class Run;
-
-// Comparison Engine Wrapper for sorting
-class CompareEngineWrapper {
+class Comparer {
 	
 private:
-
-	OrderMaker *order;
+	
+	OrderMaker *sortorder;
 	
 public:
 	
-	CompareEngineWrapper (OrderMaker *order);
-	bool operator () (Record *left, Record *right);
+	Comparer (OrderMaker *order);
+	bool operator() (Record* left, Record* right);
 	
 };
 
-// Comparison Engine Wrapper for pirority queue to compare Runs
-class CompareEngineWrapperForRun {
 
+class Run {
+	
 private:
 	
-	CompareEngineWrapper *comp;
-
+	Page bufferPage;
+	
 public:
 	
-	CompareEngineWrapperForRun (CompareEngineWrapper *comp);
-	bool operator () (Run *left, Run *right);
+	Record* firstRecord;
+    OrderMaker* sortorder;
+    File *runsFile;
+	
+    int pageOffset;
+    int runSize;
+	
+	Run (int runSize, int pageOffset, File *file, OrderMaker *order);
+	Run (File *file, OrderMaker *order);
+    ~Run();
+    
+    int GetFirstRecord();
 	
 };
+
+class Compare {
+	
+private:
+	
+    OrderMaker *sortorder;
+	
+public:
+	
+    bool operator() (Run* left, Run* right);
+	
+}; 
 
 // simple struct to pass variables from BigQ to its worker thread
 typedef struct {
@@ -51,35 +70,40 @@ typedef struct {
 	
 } BigQInfo;
 
-// a Run class for priority queue to work
-class Run {
-	
-private:
-	
-	off_t curIndex;
-	off_t endIndex;
-	File *file;
-	Page *bufferPage;
-	
-public:
-	
-	Record *record;
-	
-	Run (File *file, off_t curIndex, off_t endIndex);
-	~Run ();
-	// returns the current record in current variable
-	// changes record variable to the next Record in bufferPage
-	// returns 1 for success, and 0 for failure
-	int Next (Record *current);
-	
-};
-
 class BigQ {
+
+private:
+	int totalPages;
+    Pipe *inputPipe;
+    Pipe *outputPipe;
+    pthread_t workerThread;
+    char *fileName;
+    priority_queue<Run*, vector<Run*>, Compare> runQueue;
+    OrderMaker *sortorder;
 	
+	bool WriteRunToFile (int runLocation);
+    void AddRunToQueue (int runSize, int pageOffset);
+    friend bool comparer (Record* left, Record* right);
+
 public:
+	
+	File runsFile;
+    vector<Record*> recordList;
+    int runlength;
 	
 	BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
-	~BigQ ();
+	~BigQ () {};
+	
+	void SortRecordList();
+    void MergeRuns ();
+	
+    static void *StartMainThread (void *start) {
+		
+        BigQ *bigQ = (BigQ *)start;
+        bigQ->SortRecordList ();
+        bigQ->MergeRuns ();
+		
+    }
 	
 };
 

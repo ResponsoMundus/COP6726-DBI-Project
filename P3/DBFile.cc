@@ -364,9 +364,6 @@ Sorted :: Sorted (OrderMaker *order, int runLength) {
 Sorted :: ~Sorted () {
 	
 	delete query;
-	delete bigq;
-	delete inPipe;
-	delete outPipe;
 	delete file;
 	delete bufferPage;
 	

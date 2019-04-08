@@ -40,6 +40,7 @@ int DBFile :: Create (const char *fpath, fType ftype, void *startup) {
 		
 		md << "sorted" << endl;
 		md << ((SortInfo *) startup)->runLength << endl;
+		md << ((SortInfo *) startup)->myOrder->numAtts << endl;
 		((SortInfo *) startup)->myOrder->PrintInOfstream (md);
 		myInternalVar = new Sorted (((SortInfo *) startup)->myOrder, ((SortInfo *) startup)->runLength);
 		
@@ -89,26 +90,26 @@ int DBFile :: Open (char *fpath) {
 			OrderMaker *order = new OrderMaker;
 			
 			md >> runLength;
-			order->numAtts = 0;
+			md >> order->numAtts;
 			
-			while (!md.eof ()) {
+			for (int i = 0; i < order->numAtts; i++) {
 				
 				md >> attNum;
 				md >> str;
 				
-				order->whichAtts[order->numAtts] = attNum;
+				order->whichAtts[i] = attNum;
 				
 				if (!str.compare ("Int")) {
 					
-					order->whichTypes[order->numAtts] = Int;
+					order->whichTypes[i] = Int;
 					
 				} else if (!str.compare ("Double")) {
 					
-					order->whichTypes[order->numAtts] = Double;
+					order->whichTypes[i] = Double;
 					
 				} else if (!str.compare ("String")) {
 					
-					order->whichTypes[order->numAtts] = String;
+					order->whichTypes[i] = String;
 					
 				} else {
 					
@@ -121,8 +122,6 @@ int DBFile :: Open (char *fpath) {
 					return 0;
 					
 				}
-				
-				order->numAtts++;
 				
 			}
 			
@@ -241,7 +240,7 @@ void Heap :: Load (Schema &f_schema, const char *loadpath) {
 	while (temp.SuckNextRecord (&f_schema, tableFile) == 1)
 		Add (temp);
 	
-	file->AddPage (bufferPage, pageIndex++);
+	file->AddPage (bufferPage, pageIndex);
 	bufferPage->EmptyItOut ();
 	
 	fclose (tableFile);
@@ -264,6 +263,13 @@ int Heap :: Open (char *fpath) {
 
 void Heap :: MoveFirst () {
 	
+	if (isWriting && bufferPage->GetNumRecs () > 0) {
+		
+		file->AddPage (bufferPage, pageIndex++);
+		isWriting = false;
+		
+	}
+	
 	bufferPage->EmptyItOut ();
 	pageIndex = 0;
 	file->GetPage (bufferPage, pageIndex);
@@ -274,7 +280,7 @@ int Heap :: Close () {
 	
 	if (isWriting && bufferPage->GetNumRecs () > 0) {
 		
-		file->AddPage (bufferPage, pageIndex);
+		file->AddPage (bufferPage, pageIndex++);
 		bufferPage->EmptyItOut ();
 		isWriting = false;
 		
@@ -307,7 +313,8 @@ int Heap :: GetNext (Record &fetchme) {
 	} else {
 		// Didn't get the record from current page
 		// Need to get a new page
-		if (++pageIndex < file->GetLength () - 1) {
+		pageIndex++;
+		if (pageIndex < file->GetLength () - 1) {
 			// if not reach EOF
 			file->GetPage (bufferPage, pageIndex);
 			bufferPage->GetFirst (&fetchme);
@@ -357,9 +364,6 @@ Sorted :: Sorted (OrderMaker *order, int runLength) {
 Sorted :: ~Sorted () {
 	
 	delete query;
-	delete bigq;
-	delete inPipe;
-	delete outPipe;
 	delete file;
 	delete bufferPage;
 	
@@ -390,6 +394,13 @@ int Sorted :: Open (char *fpath) {
 	
 	bufferPage->EmptyItOut ();
 	file->Open (1, this->fpath);
+	
+	if (file->GetLength () > 0) {
+		
+		file->GetPage (bufferPage, pageIndex);
+		
+	}
+	
 	
 	return 1;
 	
@@ -486,7 +497,8 @@ int Sorted :: GetNext (Record &fetchme) {
 	} else {
 		// Didn't get the record from current page
 		// Need to get a new page
-		if (++pageIndex < file->GetLength () - 1) {
+		pageIndex++;
+		if (pageIndex < file->GetLength () - 1) {
 			// if not reach EOF
 			file->GetPage (bufferPage, pageIndex);
 			bufferPage->GetFirst (&fetchme);
@@ -514,31 +526,29 @@ int Sorted :: GetNext (Record &fetchme, CNF &cnf, Record &literal) {
 	ComparisonEngine comp;
 	
 	if (!query) {
+		// cout << "No query found! Try to gen one!" << endl;
 		// query does not exist
 		query = new OrderMaker;
 		
 		if (QueryOrderGen (*query, *order, cnf) > 0) {
 			// query generated successfully
-			if (BinarySearch(fetchme, cnf, literal)) {
-				// binary search finds a match
-				if (comp.Compare (&fetchme, &literal, &cnf)) {
-					// Found
-					return 1;
-					
-				} else {
-					// Not found need to go on searching
-					return GetNextWithQuery (fetchme, cnf, literal);
-					
-				}
+			// cout << "Query Gen Success! Go Bin Search!" << endl;
+			query->Print ();
+			if (BinarySearch (fetchme, cnf, literal)) {
+				// cout << "Found!" << endl;
+				// Found
+				return 1;
 				
 			} else {
 				// binary search fails
+				// cout << "Not Found!" << endl;
 				return 0;
 				
 			}
 			
 		} else {
 			//query generated but is empty
+			// cout << "Query Gen fail! Go Sequential!" << endl;
 			return GetNextSequential (fetchme, cnf, literal);
 			
 		}
@@ -613,7 +623,7 @@ int Sorted :: BinarySearch(Record &fetchme, CNF &cnf, Record &literal) {
 	
 	ComparisonEngine comp;
 	
-	while (first < last - 1) {
+	while (true) {
 		
 		mid = (first + last) / 2;
 		
@@ -623,11 +633,13 @@ int Sorted :: BinarySearch(Record &fetchme, CNF &cnf, Record &literal) {
 			
 			if (comp.Compare (&literal, query, &fetchme, order) <= 0) {
 				
-				last = mid;
+				last = mid - 1;
+				if (last <= first) break;
 				
 			} else {
 				
-				first = mid;
+				first = mid + 1;
+				if (last <= first) break;
 				
 			}
 			
@@ -639,22 +651,22 @@ int Sorted :: BinarySearch(Record &fetchme, CNF &cnf, Record &literal) {
 		
 	}
 	
-	while (page->GetFirst (&fetchme)) {
+	if (comp.Compare (&fetchme, &literal, &cnf)) {
 		
-		if (comp.Compare (&literal, query, &fetchme, order) == 0) {
-			
-			delete bufferPage;
-			
-			pageIndex = mid;
-			bufferPage = page;
-			
-			return 1;
-			
-		}
+		delete bufferPage;
+		
+		pageIndex = mid;
+		bufferPage = page;
+		
+		return 1;
+		
+	} else {
+	
+		delete page;
+		
+		return 0;
 		
 	}
-	
-	return 0;
 	
 }
 
@@ -675,7 +687,7 @@ void Sorted :: Merge () {
 	
 	isWriting = false;
 	
-	if (file->GetLength () != 0) {
+	if (file->GetLength () > 0) {
 		
 		MoveFirst ();
 		
@@ -722,6 +734,7 @@ void Sorted :: Merge () {
 		
 	}
 	
+	outPipe->ShutDown ();
 	newFile->Close ();
 	delete newFile;
 	
@@ -739,10 +752,10 @@ void Sorted :: Merge () {
 int Sorted :: QueryOrderGen (OrderMaker &query, OrderMaker &order, CNF &cnf) {
 	
 	query.numAtts = 0;
+	bool found = false;
 	
 	for (int i = 0; i < order.numAtts; ++i) {
 		
-		bool found = false;
 		
 		for (int j = 0; j < cnf.numAnds; ++j) {
 			
@@ -758,11 +771,15 @@ int Sorted :: QueryOrderGen (OrderMaker &query, OrderMaker &order, CNF &cnf) {
 				
 			}
 			
-			if (cnf.orList[j][0].operand1 == Literal || cnf.orList[j][0].operand2 == Literal) {
+			if ((cnf.orList[i][0].operand1 == Left && cnf.orList[i][0].operand2 == Left) ||
+               (cnf.orList[i][0].operand2 == Right && cnf.orList[i][0].operand1 == Right) ||
+               (cnf.orList[i][0].operand1==Left && cnf.orList[i][0].operand2 == Right) ||
+               (cnf.orList[i][0].operand1==Right && cnf.orList[i][0].operand2 == Left)) {
 				
-				continue;
+                continue;
 				
 			}
+
 			
 			if (cnf.orList[j][0].operand1 == Left &&
 				cnf.orList[j][0].whichAtt1 == order.whichAtts[i]) {
