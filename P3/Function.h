@@ -24,9 +24,8 @@ private:
 
 	Arithmatic *opList;
 	int numOps;
-	
+
 	int returnsInt;
-	
 
 public:
 

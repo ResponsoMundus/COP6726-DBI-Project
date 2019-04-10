@@ -166,7 +166,7 @@ void Join :: Run (
 	
 void Join :: Start () {
 	
-	// int count = 0;
+	int count = 0;
 	
 	int leftNumAtts, rightNumAtts;
 	int totalNumAtts;
@@ -291,6 +291,8 @@ void Join :: Start () {
 		
 	} else {
 		
+		// cout << "Nested Loop Version" << endl;
+		
 		char fileName[100];
 		sprintf (fileName, "temp.tmp");
 		
@@ -362,7 +364,7 @@ void Join :: Start () {
 							leftNumAtts
 						);
 						
-						//count++;
+						// count++;
 						
 						out->Insert (newRec);
 						
@@ -480,7 +482,7 @@ void Sum :: Start () {
 	// int count = 1;
 	
 	int integerSum = 0, integerRec;
-	double doubleSum = 0, doubleRec;
+	double doubleSum = 0.0, doubleRec;
 	
 	atts.name = "SUM";
 	if (!in->Remove (tmp)) {
@@ -495,19 +497,19 @@ void Sum :: Start () {
 	
 	if (atts.myType == Int) {
 		
-		integerSum = integerRec;
+		integerSum += integerRec;
 		
 	} else {
 		
-		doubleSum = doubleRec;
+		doubleSum += doubleRec;
 		
 	}
 	
 	while (in->Remove (tmp)) {
 		
-		// count++;
-		
 		compute->Apply (*tmp, integerRec, doubleRec);
+		
+		// count++;
 		
 		if (atts.myType == Int) {
 			
@@ -520,6 +522,8 @@ void Sum :: Start () {
 		}
 		
 	}
+	
+	// cout << doubleSum << endl;
 	
 	if (atts.myType == Int) {
 		
@@ -566,6 +570,7 @@ void GroupBy :: Start () {
 	Type t;
 	Schema *sumSchema;
 	Attribute att;
+	stringstream ss;
 	
 	ComparisonEngine comp;
 	
@@ -580,7 +585,7 @@ void GroupBy :: Start () {
 	
 	BigQ bigq (*in, sortPipe, *order, runLen);
 	
-	// int count = 0;
+	int count = 0;
 	
 	int integerSum = 0, integerRec;
 	double doubleSum = 0.0, doubleRec;
@@ -595,13 +600,31 @@ void GroupBy :: Start () {
 	
 	for (int i = 0; i < numAtts; i++) {
 		
-		attsToKeep[i + 1] = i;
+		attsToKeep[i + 1] = atts[i];
 		
 	}
 	
-	if (!sortPipe.Remove (prev)) {
+	if (sortPipe.Remove (prev)) {
+		
+		t = compute->Apply (*prev, integerRec, doubleRec);
+		
+		if (t == Int) {
+			
+			integerSum += integerRec;
+			// cout << integerRec << endl;
+			
+		} else {
+			
+			doubleSum += doubleRec;
+			// cout << doubleRec << endl;
+			
+		}
+		
+	} else {
 		
 		cout << "No output from sortPipe!" << endl;
+		
+		out->ShutDown();
 		
 		delete sumStr;
 		delete sumSchema;
@@ -612,20 +635,6 @@ void GroupBy :: Start () {
 		
 		exit (-1);
 		
-	} else {
-		
-		t = compute->Apply (*prev, integerRec, doubleRec);
-		
-		if (t == Int) {
-			
-			integerSum += integerRec;
-			
-		} else {
-			
-			doubleSum += doubleRec;
-			
-		}
-		
 	}
 	
 	att.name = "SUM";
@@ -633,14 +642,14 @@ void GroupBy :: Start () {
 	
 	sumSchema = new Schema (NULL, 1, &att);
 	
+	// cout << "doing group by" << endl;
+	
 	while (sortPipe.Remove (curr)) {
-		
-		// cout << "doing group by" << endl;
 		
 		if (comp.Compare (prev, curr, order) != 0) {
 			// prev != curr
 			
-			if (t = Int) {
+			if (t == Int) {
 				
 				sprintf (sumStr, "%d|", integerSum);
 				
@@ -651,22 +660,26 @@ void GroupBy :: Start () {
 			}
 			
 			sum->ComposeRecord (sumSchema, sumStr);
-			sum->Print (sumSchema);
 			newRec->MergeRecords (sum, prev, 1, prev->GetLength (), attsToKeep, numAtts + 1, 1);
+			
+			// cout << "Inserted!" << endl;
 			out->Insert (newRec);
 			
-			// count++;
+			count++;
 			// cout << count << " group done!" << endl;
 			
+			
+			doubleSum = 0.0;
+			integerSum = 0;
 			compute->Apply (*curr, integerRec, doubleRec);
 			
 			if (t == Int) {
-				
-				integerSum = integerRec;
+			
+				integerSum += integerRec;
 				
 			} else {
 				
-				doubleSum = doubleRec;
+				doubleSum += doubleRec;
 				
 			}
 			
@@ -702,13 +715,13 @@ void GroupBy :: Start () {
 		
 	}
 	
-	//count++;
+	count++;
 	sum->ComposeRecord (sumSchema, sumStr);
 	newRec->MergeRecords (sum, prev, 1, prev->GetLength (), attsToKeep, numAtts + 1, 1);
 	out->Insert (newRec);
 	// cout << count << " group done!" << endl;
 	
-	// cout << count << " groups!" << endl;
+	// cout << "Inserted " << count << " groups!" << endl;
 	
 	out->ShutDown ();
 	

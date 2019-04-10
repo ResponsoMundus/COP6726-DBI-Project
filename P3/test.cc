@@ -295,7 +295,7 @@ void q6 () {
 
 	SF_ps.WaitUntilDone ();
 	J.WaitUntilDone ();
-	G.WaitUntilDone ();
+	// G.WaitUntilDone ();
 
 	Schema sum_sch ("sum_sch", 1, &DA);
 	int cnt = clear_pipe (_out, &sum_sch, true);

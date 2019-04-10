@@ -85,7 +85,6 @@ lex.yyfunc.o: LexerFunc.l
 	lex -Pyyfunc LexerFunc.l
 	gcc  -c lex.yyfunc.c
 
-
 clean: 
 	rm -f *.o
 	rm -f *.out

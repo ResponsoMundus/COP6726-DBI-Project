@@ -105,7 +105,7 @@ int q1 () {
 	SF_ps.Run (dbf_ps, _ps, cnf_ps, lit_ps);
 	SF_ps.WaitUntilDone ();
 	
-	int cnt = clear_pipe (_ps, ps->schema (), false);
+	int cnt = clear_pipe (_ps, ps->schema (), true);
 	cout << "\n\n query1 returned " << cnt << " records \n";
 
 	dbf_ps.Close ();
@@ -137,7 +137,7 @@ int q2 () {
 
 	Attribute att3[] = {IA, SA, DA};
 	Schema out_sch ("out_sch", numAttsOut, att3);
-	int cnt = clear_pipe (_out, &out_sch, false);
+	int cnt = clear_pipe (_out, &out_sch, true);
 
 	cout << "\n\n query2 returned " << cnt << " records \n";
 
@@ -169,7 +169,7 @@ int q3 () {
 	T.WaitUntilDone ();
 
 	Schema out_sch ("out_sch", 1, &DA);
-	int cnt = clear_pipe (_out, &out_sch, false);
+	int cnt = clear_pipe (_out, &out_sch, true);
 	
 	cout << "\n\n query3 returned " << cnt << " records \n";
 
@@ -225,7 +225,7 @@ int q4 () {
 	T.WaitUntilDone ();
 
 	Schema sum_sch ("sum_sch", 1, &DA);
-	int cnt = clear_pipe (_out, &sum_sch, false);
+	int cnt = clear_pipe (_out, &sum_sch, true);
 	cout << " query4 returned " << cnt << " recs \n";
 	
 	return cnt;
@@ -277,7 +277,7 @@ int q5 () {
 // expected output: 25 rows
 int q6 () {
 
-	cout << " query6 (Not working on my own machine, be ready to stop with crtl + c)\n";
+	cout << " query6 \n";
 	char *pred_s = "(s_suppkey = s_suppkey)";
 	init_SF_s (pred_s, 100);
 	SF_s.Run (dbf_s, _s, cnf_s, lit_s); // 10k recs qualified
@@ -306,7 +306,11 @@ int q6 () {
 			char *str_sum = "(ps_supplycost)";
 			get_cnf (str_sum, &join_sch, func);
 			func.Print ();
-			OrderMaker grp_order (&join_sch);
+			// OrderMaker grp_order (&join_sch);
+	OrderMaker grp_order;
+    grp_order.numAtts = 1;
+    grp_order.whichAtts[0] = 3;
+    grp_order.whichTypes[0] = Int;
 	G.Use_n_Pages (1);
 
 	SF_ps.Run (dbf_ps, _ps, cnf_ps, lit_ps); // 161 recs qualified
@@ -315,10 +319,10 @@ int q6 () {
 
 	SF_ps.WaitUntilDone ();
 	J.WaitUntilDone ();
-	G.WaitUntilDone ();
+	// G.WaitUntilDone ();
 
 	Schema sum_sch ("sum_sch", 1, &DA);
-	int cnt = clear_pipe (_out, &sum_sch, false);
+	int cnt = clear_pipe (_out, &sum_sch, true);
 	cout << " query6 returned sum for " << cnt << " groups (expected 25 groups)\n"; \
 	
 	return cnt;

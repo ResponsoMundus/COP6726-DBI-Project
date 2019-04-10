@@ -1,7 +1,7 @@
+
 #include "Function.h"
 #include <iostream>
 #include <stdlib.h>
-
 Function :: Function () {
 
 	opList = new Arithmatic[MAX_DEPTH];
