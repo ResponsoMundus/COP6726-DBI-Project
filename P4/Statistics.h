@@ -4,41 +4,73 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <fstream>
 #include <iostream>
 
 using namespace std;
 
-class RelInfo {
+typedef map<string, AttributeInfo> AttrMap;
+typedef map<string, RelationInfo> RelMap;
+
+class AttributeInfo {
 
 public:
 	
-	int partNum;
-	int recNum;
-	map<string, int> distinctAtts;
+	string attrName;
+	int distinctTuples;
 	
-	RelInfo ();
-	RelInfo (RelInfo &copyMe);
+	AttributeInfo ();
+	AttributeInfo (string name, int num);
+	AttributeInfo (AttributeInfo &copyMe);
 	
-};
+	AttributeInfo operator= (AttributeInfo &copyMe);
+	
+}
+
+class RelationInfo {
+
+public:
+	
+	double numTuples;
+	
+	bool isJoint;
+	string relName;
+	
+	AttrMap attrMap;
+	map<string, string> relJoint;
+	
+	RelationInfo ();
+	RelationInfo (string name, int tuples);
+	RelationInfo (RelationInfo &copyMe);
+	
+	RelationInfo operator= (RelationInfo &copyMe);
+	
+	bool isRelationPresent (string relName);
+	
+}
 
 class Statistics {
 
 private:
 	
-	int partitionNum;
-	map<string, RelInfo> relMap;
-	map<string, vector<string>> relAtts;
-	map<int, vector<string>> partInfo;
+	double AndOp (AndList *andList, char *relName[], int numJoin);
+	double OrOp (OrList *orList, char *relName[], int numJoin);
+	double ComOp (ComparisonOp *comOp, char *relName[], int numJoin);
+	int GetRelForOp (Operand *operand, char *relName[], int numJoin, RelationInfo &relInfo);
 	
 public:
+	
+	RelMap relMap;
 	
 	Statistics();
 	Statistics(Statistics &copyMe);	 // Performs deep copy
 	~Statistics();
-
-
+	
+	Statistics operator= (Statistics &copyMe);
+	
 	void AddRel(char *relName, int numTuples);
-	void AddAtt(char *relName, char *attName, int numDistincts);
+	void AddAtt(char *relName, char *attrName, int numDistincts);
 	void CopyRel(char *oldName, char *newName);
 	
 	void Read(char *fromWhere);
@@ -47,10 +79,7 @@ public:
 	void  Apply(struct AndList *parseTree, char *relNames[], int numToJoin);
 	double Estimate(struct AndList *parseTree, char **relNames, int numToJoin);
 	
-	int GetPartitionNum ();
-	map<string, RelInfo> *GetRelMap ();
-	map<string, vector<string>> *GetRelAtts ();
-	map<int, vector<string>> *GetPartInfo ();
+	bool isRelInMap (string relName, RelationInfo &relInfo);
 
 };
 
