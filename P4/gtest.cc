@@ -1,3 +1,4 @@
+#include "gtest/gtest.h"
 extern "C" {
 	#include "y.tab.h"
 }
@@ -11,7 +12,6 @@ extern "C" int yyparse(void);
 extern struct AndList *final;
 
 using namespace std;
-
 
 void PrintOperand(struct Operand *pOperand)
 {
@@ -85,10 +85,12 @@ char *fileName = "Statistics.txt";
 
 
 
-void q0 (){
-
+TEST (STATISTICSTEST, READ_WRITE_TEST) {
+	
+	cout << "Read and Write Test Started!" << endl;
+	
 	Statistics s;
-        char *relName[] = {"supplier","partsupp"};
+    char *relName[] = {"supplier","partsupp"};
 
 	
 	s.AddRel(relName[0],10000);
@@ -102,11 +104,15 @@ void q0 (){
 	yy_scan_string(cnf);
 	yyparse();
 	double result = s.Estimate(final, relName, 2);
-	
+	/*
 	if(fabs(result - 800000) > 0.1) {
 		cout<< result << endl;
 		cout<<"error in estimating Q1 before apply \n ";
 	}
+	*/
+	
+	ASSERT_NEAR (800000, result, 0.1);
+	
 	s.Apply(final, relName, 2);
 
 	// test write and read
@@ -119,47 +125,61 @@ void q0 (){
 	yy_scan_string(cnf);
 	yyparse();
 	double dummy = s1.Estimate(final, relName, 2);
+	/*
 	if(fabs(dummy*3.0-result) >0.1)
 	{
 		cout<<"Read or write or last apply is not correct\n";
-	}	
+	}
+	*/
+	
+	ASSERT_NEAR (result, dummy * 3.0, 0.1);
+	
+	cout << "Read and Write Test Ended" << endl;
 	
 }
 
-void q1 (){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_1) {
+	
+	cout << "Correctness Test 1 Started!" << endl;
+	
 	Statistics s;
         char *relName[] = {"lineitem"};
 
-	s.AddRel(relName[0],6001215);
+	s.AddRel(relName[0], 6001215);
 	s.AddAtt(relName[0], "l_returnflag",3);
 	s.AddAtt(relName[0], "l_discount",11);
 	s.AddAtt(relName[0], "l_shipmode",7);
-
-		
+	
 	char *cnf = "(l_returnflag = 'R') AND (l_discount < 0.04 OR l_shipmode = 'MAIL')";
 
 	yy_scan_string(cnf);
 	yyparse();
 
 	double result = s.Estimate(final, relName, 1);
+	/*
 	cout<<"Your estimation Result  " <<result;
 	cout<<"\n Correct Answer: 8.5732e+5" << endl;
+	*/
+	
+	ASSERT_NEAR (8.5732e+5, result, 5.0);
 
 	s.Apply(final, relName, 1);
 
 	// test write and read
 	s.Write(fileName);
 	
+	cout << "Correctness Test 1 Ended!" << endl;
 	
 }
 
 
 
-void q2 (){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_2) {
+	
+	cout << "Correctness Test 2 Started!" << endl;
+	
 	Statistics s;
-        char *relName[] = {"orders","customer","nation"};
+    char *relName[] = {"orders","customer","nation"};
 
 	
 	s.AddRel(relName[0],1500000);
@@ -184,19 +204,26 @@ void q2 (){
 	yyparse();
 	
 	double result = s.Estimate(final, relName, 3);
+	/*
 	if(fabs(result-1500000)>0.1)
 		cout<<"error in estimating Q2\n";
+	*/
+	
+	ASSERT_NEAR (1500000, result, 0.1);
+	
 	s.Apply(final, relName, 3);
 
 	s.Write(fileName);
 
-	
+	cout << "Correctness Test 2 Ended!" << endl;
 	
 }
 
 // Note there is a self join
-void q3 (){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_3) {
+	
+	cout << "Correctness Test 3 Started!" << endl;
+	
 	Statistics s;
 	char *relName[] = {"supplier","customer","nation"};
 
@@ -235,20 +262,28 @@ void q3 (){
 	yyparse();
 
 	double result = s.Estimate(final, set3, 4);
+	/*
 	if(fabs(result-60000000.0)>0.1)
 		cout<<"error in estimating Q3\n";
+	*/
+	
+	ASSERT_NEAR (60000000.0, result, 0.1);
 
 	s.Apply(final, set3, 4);
 
 	s.Write(fileName);
-
+	
+	cout << "Correctness Test 3 Ended!" << endl;
+	
 }
 
 
-void q4 (){
+TEST (STATISTICSTEST, CORRECTNESS_TEST_4) {
+	
+	cout << "Correctness Test 4 Started!" << endl;
 
 	Statistics s;
-        char *relName[] = { "part", "partsupp", "supplier", "nation", "region"};
+    char *relName[] = { "part", "partsupp", "supplier", "nation", "region"};
 
 	s.AddRel(relName[0],200000);
 	s.AddAtt(relName[0], "p_partkey",200000);
@@ -301,18 +336,26 @@ void q4 (){
 	//s.Write(fileName);
 	
 	double result = s.Estimate(final, relName, 5);
+	/*
 	if(fabs(result-3200)>0.1) {
 		cout<< result << endl;
 		cout<<"error in estimating Q4\n";
 	}
+	*/
+	
+	ASSERT_NEAR (3200, result, 0.1);
 		
 	s.Apply(final, relName, 5);	
 	
 	s.Write(fileName);
 	
+	cout << "Correctness Test 4 Ended!" << endl;
+	
 }
 
-void q5 (){
+TEST (STATISTICSTEST, CORRECTNESS_TEST_5) {
+	
+	cout << "Correctness Test 5 Started!" << endl;
 
 	Statistics s;
         char *relName[] = { "customer", "orders", "lineitem"};
@@ -341,18 +384,24 @@ void q5 (){
 
 
 	double result = s.Estimate(final, relName, 3);
-
+	/*
 	if(fabs(result-400081)>0.1)
 		cout<<"error in estimating Q5\n";
-
+	*/
+	
+	ASSERT_NEAR (400081, result, 0.1);
+	
 	s.Apply(final, relName, 3);
 
 	s.Write(fileName);
 	
+	cout << "Correctness Test 5 Ended!" << endl;
 
 }
 
-void q6 (){
+TEST (STATISTICSTEST, CORRECTNESS_TEST_6) {
+	
+	cout << "Correctness Test 6 Started!" << endl;
 
 	Statistics s;
         char *relName[] = { "partsupp", "supplier", "nation"};
@@ -382,18 +431,25 @@ void q6 (){
 
 	double result = s.Estimate(final, relName, 3);
 
+	/*
 	if(fabs(result-32000)>0.1)
 		cout<<"error in estimating Q6\n";
+	*/
+	
+	ASSERT_NEAR (32000, result, 0.1);
+	
 	s.Apply(final, relName, 3);
 	
 	s.Write(fileName);
 	
-	
+	cout << "Correctness Test 6 Ended!" << endl;
 
 }
 
-void q7(){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_7) {
+	
+	cout << "Correctness Test 7 Started!" << endl;
+	
 	Statistics s;
         char *relName[] = { "orders", "lineitem"};
 
@@ -413,19 +469,25 @@ void q7(){
 	yy_scan_string(cnf);
 	yyparse();
 	double result = s.Estimate(final, relName, 2);
-
+	/*
 	if(fabs(result-2000405)>0.1)
 		cout<<"error in estimating Q7\n";
-
+	*/
+	
+	ASSERT_NEAR (2000405, result, 0.1);
+	
 	s.Apply(final, relName, 2);
 	s.Write(fileName);
 
+	cout << "Correctness Test 7 Ended!" << endl;
 	
 }
 
 // Note  OR conditions are not independent.
-void q8 (){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_8) {
+	
+	cout << "Correctness Test 8 Started!" << endl;
+	
 	Statistics s;
         char *relName[] = { "part",  "partsupp"};
 
@@ -446,17 +508,25 @@ void q8 (){
 	
 		
 	double result = s.Estimate(final, relName,2);
-
+	/*
 	if(fabs(result-48000)>0.1)
 		cout<<"error in estimating Q8\n";
-
+	*/
+	
+	ASSERT_NEAR (48000, result, 0.1);
+	
 	s.Apply(final, relName,2);
 	
 	s.Write(fileName);
+	
+	cout << "Correctness Test 8 Ended!" << endl;
 
 }
-void q9(){
 
+TEST (STATISTICSTEST, CORRECTNESS_TEST_9) {
+	
+	cout << "Correctness Test 9 Started!" << endl;
+	
 	Statistics s;
         char *relName[] = { "part",  "partsupp","supplier"};
 
@@ -482,19 +552,25 @@ void q9(){
 	yyparse();
 
 	double result = s.Estimate(final, relName,3);
+	/*
 	if(fabs(result-4)>0.5)
 		cout<<"error in estimating Q9\n";
-
+	*/
+	
+	ASSERT_NEAR (4, result, 0.5);
+	
 	s.Apply(final, relName,3);
 	
 	s.Write(fileName);
 	
-	
+	cout << "Correctness Test 9 Ended!" << endl;
 
 }
 
-void q10 (){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_10) {
+	
+	cout << "Correctness Test 10 Started!" << endl;
+	
 	Statistics s;
         char *relName[] = { "customer", "orders", "lineitem","nation"};
 
@@ -528,18 +604,25 @@ void q10 (){
 	yy_scan_string(cnf);                                                                               	yyparse();	
 	
 	double result = s.Estimate(final, relName, 4);
+	/*
 	if(fabs(result-2000405)>0.1)
 		cout<<"error in estimating Q10\n";
-
+	*/
+	
+	ASSERT_NEAR (2000405, result, 0.1);
+	
 	s.Apply(final, relName, 4);  
 	
 	s.Write(fileName);
 	
+	cout << "Correctness Test 10 Ended!" << endl;
 
 }
 
-void q11 (){
-
+TEST (STATISTICSTEST, CORRECTNESS_TEST_11) {
+	
+	cout << "Correctness Test 11 Started!" << endl;
+	
 	Statistics s;
         char *relName[] = { "part",  "lineitem"};
 
@@ -560,34 +643,25 @@ void q11 (){
 	yyparse();
 	
 	double result = s.Estimate(final, relName,2);
-
+	/*
 	if(fabs(result-21432.9)>0.5)
 		cout<<"error in estimating Q11\n";
+	*/
+	
+	ASSERT_NEAR (21432.9, result, 0.5);
+	
 	s.Apply(final, relName,2);
 	
 	s.Write(fileName);
 	
+	cout << "Correctness Test 11 Ended!" << endl;
 	
 }
 
 int main(int argc, char *argv[]) {
-	if (argc < 2) {
-		cerr << "You need to supply me the query number to run as a command-line arg.." << endl;
-		cerr << "Usage: ./test.out [0-11] >" << endl;
-		exit (1);
-	}
-
-	void (*query_ptr[]) () = {&q0,&q1, &q2, &q3, &q4, &q5, &q6, &q7, &q8,&q9,&q10,&q11};  
-	void (*query) ();
-	int qindx = atoi (argv[1]);
-
-	if (qindx >=0 && qindx < 12) {
-		query = query_ptr [qindx ];
-		query ();
-		cout << "\n\n";
-	}
-	else {
-		cout << " ERROR!!!!\n";
-	}
-
+	
+	testing::InitGoogleTest(&argc, argv); 
+	
+	return RUN_ALL_TESTS ();
+	
 }

@@ -15,3 +15,6 @@ doc/
 *.nfs0000000000222cd300003e95
 *.txt
 *.gz
+P4/lex.yy.c
+P4/y.tab.c
+P4/y.tab.h

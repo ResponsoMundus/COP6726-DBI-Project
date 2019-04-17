@@ -9,16 +9,16 @@ AttributeInfo :: AttributeInfo (string name, int num) {
 	
 }
 
-AttributeInfo :: AttributeInfo (AttributeInfo &copyMe) {
+AttributeInfo :: AttributeInfo (const AttributeInfo &copyMe) {
 	
-	attrName = copyeMe.name;
+	attrName = copyMe.attrName;
 	distinctTuples = copyMe.distinctTuples;
 	
 }
 
-AttributeInfo AttributeInfo :: operator= (AttributeInfo &copyMe) {
+AttributeInfo &AttributeInfo :: operator= (const AttributeInfo &copyMe) {
 	
-	attrName = copyeMe.name;
+	attrName = copyMe.attrName;
 	distinctTuples = copyMe.distinctTuples;
 	
 	return *this;
@@ -39,7 +39,7 @@ RelationInfo :: RelationInfo (string name, int tuples) {
 	
 }
 
-RelationInfo :: RelationInfo (RelationInfo &copyMe) {
+RelationInfo :: RelationInfo (const RelationInfo &copyMe) {
 	
 	isJoint = copyMe.isJoint;
 	relName = copyMe.relName;
@@ -48,7 +48,7 @@ RelationInfo :: RelationInfo (RelationInfo &copyMe) {
 	
 }
 
-RelationInfo RelationInfo :: operator= (RelationInfo &copyMe) {
+RelationInfo &RelationInfo :: operator= (const RelationInfo &copyMe) {
 	
 	isJoint = copyMe.isJoint;
 	relName = copyMe.relName;
@@ -97,7 +97,7 @@ Statistics Statistics :: operator= (Statistics &copyMe) {
 	
 }
 
-double AndOp (AndList *andList, char *relName[], int numJoin) {
+double Statistics :: AndOp (AndList *andList, char *relName[], int numJoin) {
 	
 	if (andList == NULL) {
 		
@@ -109,17 +109,20 @@ double AndOp (AndList *andList, char *relName[], int numJoin) {
 	double right = 1.0;
 	
 	left = OrOp (andList->left, relName, numJoin);
-	right = AndOp (andList->right, relName, numJoin);
+	right = AndOp (andList->rightAnd, relName, numJoin);
+	
+//	cout << "left of and : " << left << endl;
+//	cout << "right of and : " << right << endl;
 	
 	return left * right;
 	
 }
 
-double OrOp (OrList *orList, char *relName[], int numJoin) {
+double Statistics :: OrOp (OrList *orList, char *relName[], int numJoin) {
 	
 	if (orList == NULL) {
 		
-		return 0.0
+		return 0.0;
 		
 	}
 	
@@ -135,7 +138,7 @@ double OrOp (OrList *orList, char *relName[], int numJoin) {
 	
 	while (temp) {
 		
-		if (strcmp (orList->left->left->value, attrName) == 0) {
+		if (strcmp (temp->left->left->value, attrName) == 0) {
 			
 			count++;
 			
@@ -151,33 +154,38 @@ double OrOp (OrList *orList, char *relName[], int numJoin) {
 		
 	}
 	
-	right = Or (orList->rightOr, relName, numJoin);
+	right = OrOp (orList->rightOr, relName, numJoin);
+	
+//	cout << "Left of Or : " << left << endl; 
+//	cout << "Right of Or : " << right << endl;
 	
 	return (double) (1.0 - (1.0 - left) * (1.0 - right));
 	
 }
 
-double ComOp (ComparisonOp *comOp, char *relName[], int numJoin) {
+double Statistics :: ComOp (ComparisonOp *compOp, char *relName[], int numJoin) {
 	
 	RelationInfo leftRel, rightRel;
 	
 	double left = 0.0;
 	double right = 0.0;
 	
-	int leftResult = GetRelForOp (comOp->left, relName, numJoin, leftRel);
-	int rightResult = GetRelForOp (comOp-right, relName, numJoin, rightRel);
-	int code = comOp->code;
+	int leftResult = GetRelForOp (compOp->left, relName, numJoin, leftRel);
+	int rightResult = GetRelForOp (compOp->right, relName, numJoin, rightRel);
+	int code = compOp->code;
 	
-	if (comOp->left->code == NAME) {
+	if (compOp->left->code == NAME) {
 		
-		if (leftResult < 0) {
+		if (leftResult == -1) {
 			
-			cout << comOp->left->value << " not present in any relation!" << endl;
+			cout << compOp->left->value << " does not belong to any relation!" << endl;
 			left = 1.0;
 			
 		} else {
 			
-			left = leftRel.attrMap[comOp->left->value].distinctTuples;
+			string buffer (compOp->left->value);
+			
+			left = leftRel.attrMap[buffer].distinctTuples;
 			
 		}
 		
@@ -187,16 +195,18 @@ double ComOp (ComparisonOp *comOp, char *relName[], int numJoin) {
 		
 	}
 	
-	if (comOp->right->code == NAME) {
+	if (compOp->right->code == NAME) {
 		
-		if (rightResult < 0) {
+		if (rightResult == -1) {
 			
-			cout << comOp->right->value << " not present in any relation!" << endl;
+			cout << compOp->right->value << " does not belong to any relation!" << endl;
 			right = 1.0;
 			
 		} else {
 			
-			right = rightRel.attrMap[comOp->left->value].distinctTuples;
+			string buffer (compOp->right->value);
+			
+			right = rightRel.attrMap[buffer].distinctTuples;
 			
 		}
 		
@@ -229,7 +239,7 @@ double ComOp (ComparisonOp *comOp, char *relName[], int numJoin) {
 	
 }
 
-int GetRelForOp (Operand *operand, char *relName[], int numJoin, RelationInfo &relInfo) {
+int Statistics :: GetRelForOp (Operand *operand, char *relName[], int numJoin, RelationInfo &relInfo) {
 	
 	if (operand == NULL) {
 		
@@ -243,13 +253,13 @@ int GetRelForOp (Operand *operand, char *relName[], int numJoin, RelationInfo &r
 		
 	}
 	
-	RelMap relMap;
-	
 	for (auto iter = relMap.begin (); iter != relMap.end (); iter++) {
 		
-		if (iter->second.attrMap.find (operand->value) != iter->second.attrMap.end()) {
+		string buffer (operand->value);
+		
+		if (iter->second.attrMap.find (buffer) != iter->second.attrMap.end()) {
 			
-			relation = iter->second;
+			relInfo = iter->second;
 			
 			return 0;
 			
@@ -263,17 +273,22 @@ int GetRelForOp (Operand *operand, char *relName[], int numJoin, RelationInfo &r
 
 void Statistics :: AddRel (char *relName, int numTuples) {
 	
-	RelationInfo temp(relName, numTuples);
+	string relStr (relName);
 	
-	relMap[relName] = temp;
+	RelationInfo temp(relStr, numTuples);
+	
+	relMap[relStr] = temp;
 	
 }
 
 void Statistics :: AddAtt (char *relName, char *attrName, int numDistincts) {
 	
-	AttributeInfo temp(attrName, numDistincts);
+	string relStr (relName);
+	string attrStr (attrName);
 	
-	relMap[relName].attrMap[attrName] = temp;
+	AttributeInfo temp(attrStr, numDistincts);
+	
+	relMap[relStr].attrMap[attrStr] = temp;
 	
 }
 
@@ -293,9 +308,14 @@ void Statistics :: CopyRel (char *oldName, char *newName) {
 		it++
 	) {
 		
-		AttributeInfo temp (it->second);
+		string newAttrStr = newStr;
+		newAttrStr.append (".");
+		newAttrStr.append(it->first);
 		
-		newAttrMap[it->first] = temp;
+		AttributeInfo temp (it->second);
+		temp.attrName = newAttrStr;
+		
+		newAttrMap[newAttrStr] = temp;
 		
 	}
 	
@@ -422,44 +442,54 @@ void Statistics :: Apply (struct AndList *parseTree, char *relNames[], int numTo
 	
 	while (index < numToJoin) {
 		
-		auto iter = relMap.find (relNmaes[index]);
+		string buffer (relNames[index]);
+		
+		auto iter = relMap.find (buffer);
 		
 		if (iter != relMap.end ()) {
 			
-			relation = iter->second;
+			rel = iter->second;
 			
-			names[numJoin++] = relNams[index];
+			names[numJoin++] = relNames[index];
 			
-			if (!rel.isJoint) {
+			if (rel.isJoint) {
+				
+				int size = rel.relJoint.size();
+				
+				if (size <= numToJoin) {
+					
+					for (int i = 0; i < numToJoin; i++) {
+						
+						string buf (relNames[i]);
+						
+						if (rel.relJoint.find (buf) == rel.relJoint.end () &&
+							rel.relJoint[buf] != rel.relJoint[buffer]) {
+							
+							cout << "Cannot be joined!" << endl;
+							
+							return;
+							
+						}
+						
+					}
+					
+				} else {
+					
+					cout << "Cannot be joined!" << endl;
+					
+				}
+			
+			} else {
 				
 				index++;
+				
+				continue;
 				
 			}
 			
 		} else {
 			
-			int size = rel.relJoint.size();
-			
-			if (size <= numToJoin) {
-				
-				for (int i = 0; i < numToJoin; i++) {
-					
-					if (rel.relJoint.find (relNames[i]) == rel.relJoint.end () &&
-						rel.relJoint[relNames[i]] != rel.relJoint[relNames[index]) {
-						
-						cout << "Cannot be joined!" << endl;
-						
-						return;
-						
-					}
-					
-				}
-				
-			} else {
-				
-				cout << "Cannot be joined!" << endl;
-				
-			}
+			cout << buffer << " Not Found!" << endl;
 			
 		}
 		
@@ -476,15 +506,20 @@ void Statistics :: Apply (struct AndList *parseTree, char *relNames[], int numTo
 	
 	relMap.erase (firstRelName);
 	firstRel.isJoint = true;
-	forstRel.numTuples = estimation;
+	firstRel.numTuples = estimation;
+	
+//	cout << firstRelName << endl;
+//	cout << estimation << endl;
 	
 	while (index < numJoin) {
 		
-		firstRel.relJoint[names[index]] = names[index];
-		temp = relMap[names[index]];
-		relMap.erase (names[index]);
+		string buffer (names[index]);
 		
-		firstRel.attrMap.insert (temp.relMap.begin (), temp.relMap.end ());
+		firstRel.relJoint[buffer] = buffer;
+		temp = relMap[buffer];
+		relMap.erase (buffer);
+		
+		firstRel.attrMap.insert (temp.attrMap.begin (), temp.attrMap.end ());
 		index++;
 		
 	}
@@ -502,15 +537,16 @@ double Statistics :: Estimate (struct AndList *parseTree, char **relNames, int n
 	
 	while (index < numToJoin) {
 		
-		if (relMap.find (relNames[index]) != relMap.end ()) {
+		string buffer (relNames[index]);
+		
+		if (relMap.find (buffer) != relMap.end ()) {
 			
-			RelationInfo rel = relMa[relNames[index]]
-			
-			product *= (double)rel.numTuples;
+			// cout << buffer << " Found in Estimate!" << endl;
+			product *= (double) relMap[buffer].numTuples;
 			
 		} else {
 			
-			cout << relNames[index] << " Not Found!" << endl;
+			cout << buffer << " Not Found!" << endl;
 			
 		}
 		
@@ -518,13 +554,16 @@ double Statistics :: Estimate (struct AndList *parseTree, char **relNames, int n
 	
 	}
 	
-	if (parseTree = NULL) {
+	if (parseTree == NULL) {
 		
 		return product;
 		
 	}
 	
 	factor = AndOp (parseTree, relNames, numToJoin);
+	
+//	cout << product << endl;
+//	cout << factor << endl;
 	
 	return factor * product;
 	

@@ -1,5 +1,6 @@
 
-Q1: relations:  lineitem
+Q1: q1
+relations:  lineitem
      T(lineitem) =6001215
      v(lineitem, l_returnflag) =3
      v(lineitem,l_discount) = 11
@@ -11,14 +12,15 @@ Q1: relations:  lineitem
 
      
 
-Q2:
+Q2: q0
    Relation: supplier, partsupp
      T(supplier) = 10000, (partsupp) = 800000
      v(supplier, s_suppkey) = 10000, v(partsupp, ps_suppkey)= 10000,
      CNF:	(s_suppkey = ps_suppkey)
      Answer: 800000
 
-Q3: Relation: orders, customer, nation
+Q3: q2
+Relation: orders, customer, nation
 
      T(customer) = 150000, T(nation) = 25,  T(orders)＝1500000
 
@@ -29,7 +31,8 @@ Q3: Relation: orders, customer, nation
    		AND (c_nationkey = n_nationkey)
     Answer:1500000
 
-Q4: relation: part, supplier, partsupp, nation, region
+Q4: q4
+relation: part, supplier, partsupp, nation, region
     T(part) = 200000, T(supplier) = 10000, T(partsupp) = 800000, T(nation) = 25, T(region) = 5
     v(part, p_partkey) = 200000, v(partsupp, ps_partkey) = 200000
     v(supplier, s_suppkey) = 10000, v(partsupp, ps_suppkey= 10000
@@ -48,7 +51,8 @@ Q4: relation: part, supplier, partsupp, nation, region
 
    	
 
-Q5: relations:  supplier, customer,nation
+Q5: q3
+relations:  supplier, customer,nation
  T(supplier) = 10000, T(customer) = 150000, T(nation) = 25
    
      v(nation, n_nationkey) =25
@@ -59,8 +63,8 @@ Q5: relations:  supplier, customer,nation
 	Answer:  60000000
 
    	
-
-Q6: relation: customer,orders,lineitem
+Q6: q5
+relation: customer,orders,lineitem
 
       T(orders) = 1500000, T(customer) = 150000, T(lineitem) = 6001215,
     v(customer, c_mktsegment) = 5
@@ -73,7 +77,8 @@ Q6: relation: customer,orders,lineitem
 
    Answer:  40081
 
-Q7: relation: partsupp, supplier, nation
+Q7: q6
+relation: partsupp, supplier, nation
     T(partsupp) = 800000, T(supplier) = 10000,  T(nation) = 25, 
     v(supplier, s_suppkey) = 10000, v(partsupp, ps_suppkey)= 10000, 
     v(supplier, s_nationkey) = 25, v(nation, n_nationkey)=25,
@@ -83,14 +88,16 @@ Q7: relation: partsupp, supplier, nation
 		AND (n_name = 'AMERICA')
 Answer:32000
 
-Q8：Relation: orders, lineitem
+Q8: q7
+Relation: orders, lineitem
 
       T(orders) = 1500000,  T(lineitem) = 6001215,
     v(lineitem, l_orderkey)= 1500000, v(orders,o_orderkey) = 1500000
     CNF: (l_receiptdate >'1995-02-01' ) AND (l_orderkey = o_orderkey)
 		 Answer: 2000405
 
-Q9: Relation:partsupp, part
+Q9: q8
+Relation:partsupp, part
  
     T(part) = 200000,  T(partsupp) = 800000 
     v(part, p_partkey) = 200000, v(partsupp, ps_partkey) = 200000
@@ -98,7 +105,8 @@ Q9: Relation:partsupp, part
     CNF: (p_partkey=ps_partkey) AND ((p_size =3) OR (p_size=6) OR (p_size =19))
 	Answer: 48000
  
-Q10: Relation: part, supplier,  partsupp  
+Q10: q9
+Relation: part, supplier,  partsupp  
 
     T(part) = 200000, T(supplier) = 10000, T(partsupp) = 800000
 
@@ -111,7 +119,7 @@ Q10: Relation: part, supplier,  partsupp
 		')
 	Answer:4 
 
-Q11:
+Q11: q10
    relation: customer, orders, lineitem, nation
 
      T(customer) = 150000, T(nation) = 25, T(lineitem) = 6001215, T(orders)＝1500000
@@ -128,7 +136,7 @@ Q11:
 
    Answer: 2000405 
 
-Q12: 
+Q12: q11
    Relation: part,lineitem
 
      T(lineitem) = 6001215, T(part)＝200000

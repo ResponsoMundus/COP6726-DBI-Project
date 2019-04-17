@@ -1,14 +1,18 @@
-#ifndef STATISTICS_
-#define STATISTICS_
+#ifndef STATISTICS_H
+#define STATISTICS_H
 #include "ParseTree.h"
 #include <map>
 #include <string>
 #include <vector>
+#include <utility>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 
 using namespace std;
+
+class AttributeInfo;
+class RelationInfo;
 
 typedef map<string, AttributeInfo> AttrMap;
 typedef map<string, RelationInfo> RelMap;
@@ -22,11 +26,11 @@ public:
 	
 	AttributeInfo ();
 	AttributeInfo (string name, int num);
-	AttributeInfo (AttributeInfo &copyMe);
+	AttributeInfo (const AttributeInfo &copyMe);
 	
-	AttributeInfo operator= (AttributeInfo &copyMe);
+	AttributeInfo &operator= (const AttributeInfo &copyMe);
 	
-}
+};
 
 class RelationInfo {
 
@@ -42,13 +46,13 @@ public:
 	
 	RelationInfo ();
 	RelationInfo (string name, int tuples);
-	RelationInfo (RelationInfo &copyMe);
+	RelationInfo (const RelationInfo &copyMe);
 	
-	RelationInfo operator= (RelationInfo &copyMe);
+	RelationInfo &operator= (const RelationInfo &copyMe);
 	
 	bool isRelationPresent (string relName);
 	
-}
+};
 
 class Statistics {
 
