@@ -18,3 +18,4 @@ doc/
 P4/lex.yy.c
 P4/y.tab.c
 P4/y.tab.h
+*.bin.md

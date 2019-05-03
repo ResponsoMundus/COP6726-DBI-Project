@@ -253,9 +253,9 @@ int Statistics :: GetRelForOp (Operand *operand, char *relName[], int numJoin, R
 		
 	}
 	
+	string buffer (operand->value);
+	
 	for (auto iter = relMap.begin (); iter != relMap.end (); iter++) {
-		
-		string buffer (operand->value);
 		
 		if (iter->second.attrMap.find (buffer) != iter->second.attrMap.end()) {
 			
@@ -310,7 +310,7 @@ void Statistics :: CopyRel (char *oldName, char *newName) {
 		
 		string newAttrStr = newStr;
 		newAttrStr.append (".");
-		newAttrStr.append(it->first);
+		newAttrStr.append (it->first);
 		
 		AttributeInfo temp (it->second);
 		temp.attrName = newAttrStr;
@@ -325,7 +325,8 @@ void Statistics :: CopyRel (char *oldName, char *newName) {
 	
 void Statistics :: Read (char *fromWhere) {
 	
-	int numRel, numJoint, numAttr, numTuples, numDistincts;
+	int numRel, numJoint, numAttr;
+	double numTuples, numDistincts;
 	string relName, jointName, attrName;
 	
 	ifstream in (fromWhere);
@@ -339,11 +340,14 @@ void Statistics :: Read (char *fromWhere) {
 	relMap.clear ();
 	
 	in >> numRel;
+//	cout << numRel << endl;
 	
 	for (int i = 0; i < numRel; i++) {
 		
+//		cout << i << endl;
 		in >> relName;
 		in >> numTuples;
+//		cout << relName << " " << numTuples << endl;
 		
 		RelationInfo relation (relName, numTuples);
 		relMap[relName] = relation;

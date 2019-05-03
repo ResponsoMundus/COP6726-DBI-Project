@@ -253,9 +253,9 @@ int Statistics :: GetRelForOp (Operand *operand, char *relName[], int numJoin, R
 		
 	}
 	
+	string buffer (operand->value);
+	
 	for (auto iter = relMap.begin (); iter != relMap.end (); iter++) {
-		
-		string buffer (operand->value);
 		
 		if (iter->second.attrMap.find (buffer) != iter->second.attrMap.end()) {
 			
@@ -310,7 +310,7 @@ void Statistics :: CopyRel (char *oldName, char *newName) {
 		
 		string newAttrStr = newStr;
 		newAttrStr.append (".");
-		newAttrStr.append(it->first);
+		newAttrStr.append (it->first);
 		
 		AttributeInfo temp (it->second);
 		temp.attrName = newAttrStr;
