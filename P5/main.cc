@@ -93,12 +93,20 @@ public:
 	NodeType t;
 	Schema sch;  // Ouput Schema
 	
+	RelOp *relOp;
+	
 	QueryNode ();
 	QueryNode (NodeType type) : t (type) {}
 	
 	~QueryNode () {}
 	virtual void Print () {};
 	virtual void Execute (unordered_map<int, Pipe *> &pipeMap) {};
+	
+	virtual void Wait () {
+		
+		relOp->WaitUntilDone ();
+		
+	}
 	
 };
 
@@ -143,12 +151,15 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		Join j;
+		relOp = new Join ();
 		
 		left->Execute (pipeMap);
 		right->Execute (pipeMap);
 		
-		j.Run (*(pipeMap[left->pid]), *(pipeMap[right->pid]), *(pipeMap[pid]), cnf, literal);
+		((Join *)relOp)->Run (*(pipeMap[left->pid]), *(pipeMap[right->pid]), *(pipeMap[pid]), cnf, literal);
+		
+		left->Wait ();
+		right->Wait ();
 		
 //		j.WaitUntilDone ();
 		
@@ -201,11 +212,13 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		Project p;
+		relOp = new Project ();
 		
 		from->Execute (pipeMap);
 		
-		p.Run (*(pipeMap[from->pid]), *(pipeMap[pid]), attsToKeep, numIn, numOut);
+		((Project *)relOp)->Run (*(pipeMap[from->pid]), *(pipeMap[pid]), attsToKeep, numIn, numOut);
+		
+		from->Wait ();
 		
 //		p.WaitUntilDone ();
 		
@@ -253,9 +266,9 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		SelectFile sf;
+		relOp = new SelectFile ();
 		
-		sf.Run (file, *(pipeMap[pid]), cnf, literal);
+		((SelectFile *)relOp)->Run (file, *(pipeMap[pid]), cnf, literal);
 		
 //		sf.WaitUntilDone ();
 		
@@ -300,11 +313,13 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		SelectPipe sp;
+		relOp = new SelectPipe ();
 		
 		from->Execute (pipeMap);
 		
-		sp.Run (*(pipeMap[from->pid]), *(pipeMap[pid]), cnf, literal);
+		((SelectPipe *)relOp)->Run (*(pipeMap[from->pid]), *(pipeMap[pid]), cnf, literal);
+		
+		from->Wait ();
 		
 //		sp.WaitUntilDone ();
 		
@@ -348,11 +363,13 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		Sum s;
+		relOp = new Sum ();
 		
 		from->Execute (pipeMap);
 		
-		s.Run (*(pipeMap[from->pid]), *(pipeMap[pid]), compute);
+		((Sum *)relOp)->Run (*(pipeMap[from->pid]), *(pipeMap[pid]), compute);
+		
+		from->Wait ();
 		
 //		s.WaitUntilDone ();
 		
@@ -393,11 +410,13 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		DuplicateRemoval dr;
+		relOp = new DuplicateRemoval ();
 		
 		from->Execute (pipeMap);
 		
-		dr.Run (*(pipeMap[from->pid]), *(pipeMap[pid]), sch);
+		((DuplicateRemoval *)relOp)->Run (*(pipeMap[from->pid]), *(pipeMap[pid]), sch);
+		
+		from->Wait ();
 		
 //		dr.WaitUntilDone ();
 		
@@ -445,11 +464,13 @@ public:
 		
 		pipeMap[pid] = new Pipe (BUFFSIZE);
 		
-		GroupBy gb;
+		relOp = new GroupBy ();
 		
 		from->Execute (pipeMap);
 		
-		gb.Run (*(pipeMap[from->pid]), *(pipeMap[pid]), group, compute);
+		((GroupBy *)relOp)->Run (*(pipeMap[from->pid]), *(pipeMap[pid]), group, compute);
+		
+		from->Wait ();
 		
 //		gb.WaitUntilDone ();
 		
@@ -488,11 +509,13 @@ public:
 	
 	void Execute (unordered_map<int, Pipe *> &pipeMap) {
 		
-		WriteOut wo;
+		relOp = new WriteOut ();
 		
 		from->Execute (pipeMap);
 		
-		wo.Run (*(pipeMap[from->pid]), output, sch);
+		((WriteOut *)relOp)->Run (*(pipeMap[from->pid]), output, sch);
+		
+		from->Wait ();
 		
 //		wo.WaitUntilDone ();
 		
@@ -810,6 +833,7 @@ void CopyAttrList (AttrList *attrList, vector<Attribute> &atts) {
 		Attribute att;
 		
 		att.name = attrList->name;
+		
 		switch (attrList->type) {
 			
 			case 0 : {
@@ -903,7 +927,7 @@ void cleanup () {
 int main () {
 	
 	cleanup ();
-	outputVar = "NONE";
+	outputVar = "STDOUT";
 	
 	while (1) {
 		
@@ -1184,9 +1208,9 @@ int main () {
 				
 				root->Execute (pipeMap);
 				
-				
-				
 			}
+			
+			int i = 0;
 			
 			if (strcmp (outputVar, "STDOUT") == 0) {
 				
@@ -1195,17 +1219,21 @@ int main () {
 				
 				while (p->Remove (&rec)) {
 					
+					i++;
+					
 					rec.Print (&(root->sch));
 					
 				}
 				
 			}
 			
+			cout << i << " records found!" << endl;
+			
 		} else if (queryType == 2) {
 	
-			cout << "CREATE" << endl;
+//			cout << "CREATE" << endl;
 			
-			cout << tableName << endl;
+//			cout << tableName << endl;
 			
 			if (attsToSort) {
 				
@@ -1243,6 +1271,7 @@ int main () {
 				
 				ofs << iter->name << " ";
 				
+				cout << iter->myType << endl;
 				switch (iter->myType) {
 					
 					case Int : {
@@ -1293,9 +1322,9 @@ int main () {
 			
 		} else if (queryType == 3) {
 			
-			cout << "DROP" << endl;
+//			cout << "DROP" << endl;
 			
-			cout << tableName << endl;
+//			cout << tableName << endl;
 			
 			char fileName[100];
 			char metaName[100];
@@ -1343,16 +1372,19 @@ int main () {
 				
 			}
 			
+			ifs.close ();
+			ofs.close ();
+			
 			remove (catalog);
 			rename (tempFile, catalog);
 			remove (tempFile);
 			
 		} else if (queryType == 4) {
 			
-			cout << "INSERT" << endl;
+//			cout << "INSERT" << endl;
 			
-			cout << fileToInsert << endl;
-			cout << tableName << endl;
+//			cout << fileToInsert << endl;
+//			cout << tableName << endl;
 			
 			char fileName[100];
 			char tpchName[100];
@@ -1360,8 +1392,12 @@ int main () {
 			sprintf (fileName, "bin/%s.bin", tableName);
 			sprintf (tpchName, "tcph/%s", fileToInsert);
 			
+//			cout << tpchName << endl;
+			
 			DBFile file;
 			Schema sch (catalog, tableName);
+			
+			sch.Print ();
 			
 			if (file.Open (fileName)) {
 				
@@ -1373,13 +1409,13 @@ int main () {
 			
 		} else if (queryType == 5) {
 			
-			cout << "SET" << endl;
+//			cout << "SET" << endl;
 			
-			cout << outputVar << endl;
+//			cout << outputVar << endl;
 			
 		} else if (queryType == 6) {
 			
-			cout << "EXIT" << endl;
+//			cout << "EXIT" << endl;
 			/*
 			Statistics s;
 			initStatistics (s);

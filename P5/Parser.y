@@ -179,11 +179,11 @@ NewAtts: Name Name
 {
 	$$ = (struct AttrList *) malloc (sizeof (struct AttrList));
 	$$->name = $1;
-	if(strcmp($2,"INTEGER")==0)
+	if(strcmp($2, "INTEGER") == 0)
 		$$->type = 0;
-	else if(strcmp($2,"DOUBLE")==0)
+	else if(strcmp($2, "DOUBLE") == 0)
 		$$->type = 1;
-	else if(strcmp($2,"STRING")==0)
+	else if(strcmp($2, "STRING") == 0)
 		$$->type = 2;
 	$$->next = $4;
 };
